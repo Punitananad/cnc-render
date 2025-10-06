@@ -1,0 +1,194 @@
+{% extends "base.html" %}
+
+{% block title %}Trading Calculators{% endblock %}
+
+{% block content %}
+<div class="right_col" role="main">
+    <div class="">
+        <div class="page-title">
+            <div class="title_left">
+                <h3>Trading Calculators</h3>
+            </div>
+        </div>
+
+        <div class="clearfix"></div>
+
+        <!-- Stats Overview -->
+        <div class="row top_tiles">
+            <div class="col-lg-3 col-md-6 col-sm-6 col-xs-12">
+                <div class="tile-stats">
+                    <div class="icon"><i class="fa fa-calculator"></i></div>
+                    <div class="count">5</div>
+                    <h3>Calculators</h3>
+                    <p>Available Tools</p>
+                </div>
+            </div>
+            <div class="col-lg-3 col-md-6 col-sm-6 col-xs-12">
+                <div class="tile-stats">
+                    <div class="icon"><i class="fa fa-chart-line"></i></div>
+                    <div class="count">10x</div>
+                    <h3>Max Leverage</h3>
+                    <p>F&O Trading</p>
+                </div>
+            </div>
+            <div class="col-lg-3 col-md-6 col-sm-6 col-xs-12">
+                <div class="tile-stats">
+                    <div class="icon"><i class="fa fa-shield-alt"></i></div>
+                    <div class="count">99%</div>
+                    <h3>Accuracy</h3>
+                    <p>Risk Management</p>
+                </div>
+            </div>
+            <div class="col-lg-3 col-md-6 col-sm-6 col-xs-12">
+                <div class="tile-stats">
+                    <div class="icon"><i class="fa fa-users"></i></div>
+                    <div class="count">1K+</div>
+                    <h3>Traders</h3>
+                    <p>Active Users</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="row">
+            <div class="col-md-12">
+                <div class="x_panel">
+                    <div class="x_title">
+                        <h2><i class="fa fa-calculator"></i> Select Your Calculator</h2>
+                        <div class="clearfix"></div>
+                    </div>
+                    <div class="x_content">
+                        <p class="text-muted">
+                            Choose the right calculator for your trading style. Each calculator is tailored to 
+                            provide precise risk management and profit calculations for different market approaches.
+                        </p>
+                        
+                        <div class="row">
+                            <!-- Intraday Calculator -->
+                            <div class="col-lg-4 col-md-6 col-sm-6 col-xs-12">
+                                <div class="tile-stats calculator-card" style="cursor: pointer; min-height: 200px;" onclick="window.location.href='{{ url_for('intraday') }}'">
+                                    <div class="icon" style="color: #1ABB9C;"><i class="fa fa-bolt"></i></div>
+                                    <div class="count" style="color: #1ABB9C;">5x</div>
+                                    <h3>Intraday Calculator</h3>
+                                    <p>High-speed day trading with 5x leverage. Perfect for quick profits in volatile markets.</p>
+                                    <div class="text-center" style="margin-top: 15px;">
+                                        <button class="btn btn-primary btn-sm">Start Trading <i class="fa fa-arrow-right"></i></button>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <!-- F&O Calculator -->
+                            <div class="col-lg-4 col-md-6 col-sm-6 col-xs-12">
+                                <div class="tile-stats calculator-card" style="cursor: pointer; min-height: 200px;" onclick="window.location.href='{{ url_for('fo_calculator') }}'">
+                                    <div class="icon" style="color: #26B99A;"><i class="fa fa-exchange-alt"></i></div>
+                                    <div class="count" style="color: #26B99A;">10x</div>
+                                    <h3>F&O Calculator</h3>
+                                    <p>Advanced futures and options trading with maximum 10x leverage for experienced traders.</p>
+                                    <div class="text-center" style="margin-top: 15px;">
+                                        <button class="btn btn-success btn-sm">Trade F&O <i class="fa fa-arrow-right"></i></button>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <!-- MTF Calculator -->
+                            <div class="col-lg-4 col-md-6 col-sm-6 col-xs-12">
+                                <div class="tile-stats calculator-card" style="cursor: pointer; min-height: 200px;" onclick="window.location.href='{{ url_for('mtf_calculator') }}'">
+                                    <div class="icon" style="color: #E74C3C;"><i class="fa fa-money-bill-wave"></i></div>
+                                    <div class="count" style="color: #E74C3C;">4x</div>
+                                    <h3>MTF Calculator</h3>
+                                    <p>Margin Trading Facility with 4x leverage for extended holding periods with margin benefits.</p>
+                                    <div class="text-center" style="margin-top: 15px;">
+                                        <button class="btn btn-danger btn-sm">Use MTF <i class="fa fa-arrow-right"></i></button>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <!-- Swing Trading -->
+                            <div class="col-lg-4 col-md-6 col-sm-6 col-xs-12">
+                                <div class="tile-stats calculator-card" style="cursor: pointer; min-height: 200px;" onclick="window.location.href='{{ url_for('swing_calculator') }}'">
+                                    <div class="icon" style="color: #F39C12;"><i class="fa fa-chart-line"></i></div>
+                                    <div class="count" style="color: #F39C12;">2x</div>
+                                    <h3>Swing Trading</h3>
+                                    <p>Multi-day position trading with moderate 2x leverage to capture medium-term movements.</p>
+                                    <div class="text-center" style="margin-top: 15px;">
+                                        <button class="btn btn-primary btn-sm">Swing Trade <i class="fa fa-arrow-right"></i></button>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <!-- Delivery Equity -->
+                            <div class="col-lg-4 col-md-6 col-sm-6 col-xs-12">
+                                <div class="tile-stats calculator-card" style="cursor: pointer; min-height: 200px;" onclick="window.location.href='{{ url_for('delivery_calculator') }}'">
+                                    <div class="icon" style="color: #9B59B6;"><i class="fa fa-landmark"></i></div>
+                                    <div class="count" style="color: #9B59B6;">1x</div>
+                                    <h3>Delivery Equity</h3>
+                                    <p>Long-term investment without leverage. Build wealth through strategic equity positions.</p>
+                                    <div class="text-center" style="margin-top: 15px;">
+                                        <button class="btn btn-success btn-sm">Invest <i class="fa fa-arrow-right"></i></button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<style>
+.calculator-card {
+    transition: all 0.3s ease;
+    border-left: 4px solid transparent;
+}
+
+.calculator-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+    border-left-color: #1ABB9C;
+}
+
+.top_tiles .tile-stats {
+    margin-bottom: 20px;
+}
+
+.top_tiles .tile-stats .icon {
+    opacity: 0.8;
+}
+
+.calculator-card .count {
+    font-size: 32px;
+    margin-bottom: 8px;
+}
+
+.calculator-card h3 {
+    font-size: 16px;
+    margin-bottom: 10px;
+    color: #73879C;
+}
+
+.calculator-card p {
+    font-size: 12px;
+    line-height: 1.4;
+    margin-bottom: 15px;
+}
+</style>
+
+<script>
+// Add hover effects and smooth navigation
+document.addEventListener('DOMContentLoaded', function() {
+    const calculatorCards = document.querySelectorAll('.calculator-card');
+    
+    calculatorCards.forEach(card => {
+        card.addEventListener('mouseenter', function() {
+            this.style.borderLeftColor = '#1ABB9C';
+        });
+        
+        card.addEventListener('mouseleave', function() {
+            this.style.borderLeftColor = 'transparent';
+        });
+    });
+});
+</script>
+{% endblock %}

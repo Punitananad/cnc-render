@@ -1,0 +1,261 @@
+{% extends "base.html" %}
+
+{% block title %}Saved Intraday Trades{% endblock %}
+
+{% block extra_css %}
+<style>
+  body {
+    font-family: 'Segoe UI', sans-serif;
+    background: #1a1a1a;
+    color: #f1f1f1;
+    padding: 20px;
+    max-width: 1200px;
+    margin: auto;
+  }
+
+  h1 {
+    text-align: center;
+    color: #00ffc3;
+    margin-bottom: 25px;
+  }
+
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 20px;
+  }
+
+  th, td {
+    border: 1px solid #444;
+    padding: 8px 10px;
+    text-align: left;
+    font-size: 14px;
+  }
+
+  th {
+    background-color: #00ffc3;
+    color: #000;
+  }
+
+  tr:nth-child(even) {
+    background-color: #222;
+  }
+
+  tr:hover {
+    background-color: #333;
+  }
+
+  .buy {
+    color: #00ff88;
+    font-weight: bold;
+  }
+
+  .sell {
+    color: #ff4f4f;
+    font-weight: bold;
+  }
+
+  .actions {
+    display: flex;
+    gap: 8px;
+  }
+
+  .actions form {
+    margin: 0;
+  }
+
+  .actions button {
+    background-color: #00ffc3;
+    border: none;
+    padding: 5px 12px;
+    cursor: pointer;
+    border-radius: 5px;
+    font-weight: bold;
+    color: #000;
+  }
+
+  .actions button:hover {
+    background-color: #00e6b0;
+  }
+  
+  .btn-journal {
+    background: linear-gradient(135deg, #ff6b35, #f7931e);
+    color: white;
+    border: none;
+    padding: 6px 12px;
+    border-radius: 5px;
+    font-weight: bold;
+    cursor: pointer;
+    margin-right: 5px;
+    font-size: 12px;
+    transition: all 0.3s ease;
+  }
+  
+  .btn-journal:hover {
+    background: linear-gradient(135deg, #e55a2b, #d4821a);
+    transform: translateY(-1px);
+    box-shadow: 0 4px 8px rgba(255, 107, 53, 0.3);
+  }
+  
+  .btn-journal i {
+    margin-right: 4px;
+  }
+
+  .trade-type {
+    padding: 4px 8px;
+    border-radius: 4px;
+    font-weight: bold;
+    text-align: center;
+  }
+
+  .trade-type.buy {
+    background-color: rgba(0, 255, 136, 0.2);
+  }
+
+  .trade-type.sell {
+    background-color: rgba(255, 79, 79, 0.2);
+  }
+
+  .container {
+    max-width: 1200px;
+    margin: 100px auto;
+    padding: 20px;
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container">
+  <h1>Saved Intraday Trades</h1>
+
+  <table>
+    <thead>
+      <tr>
+        <th>Type</th>
+        <th>ID</th>
+        <th>Avg Price (₹)</th>
+        <th>Qty</th>
+        <th>Return (%)</th>
+        <th>Risk (%)</th>
+        <th>Capital (₹)</th>
+        <th>Target (₹)</th>
+        <th>Stop-Loss (₹)</th>
+        <th>Profit (₹)</th>
+        <th>Risk (₹)</th>
+        <th>RR Ratio</th>
+        <th>Stock Name</th>
+        <th>Trade Notes</th>
+        <th>Actions</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for trade in trades %}
+      <tr data-trade-id="{{ trade.id }}" {% if trade.status == 'closed' %}style="opacity: 0.7;"{% endif %}>
+        <td class="trade-type {{ trade.trade_type }}">
+          {{ trade.trade_type|upper }}
+          {% if trade.status == 'closed' %}
+          <span style="background:#ff3b30;color:white;padding:2px 6px;border-radius:10px;font-size:10px;margin-left:5px;">CLOSED</span>
+          {% endif %}
+        </td>
+
+        <td>{{ trade.id }}</td>
+
+        <td data-field="avg_price">
+          {% if trade.avg_price is not none %}{{ "%.2f"|format(trade.avg_price) }}{% else %}—{% endif %}
+        </td>
+
+        <td data-field="quantity">{{ trade.quantity if trade.quantity is not none else "—" }}</td>
+
+        <td data-field="expected_return">
+          {% if trade.expected_return is not none %}{{ "%.2f"|format(trade.expected_return) }}{% else %}—{% endif %}
+        </td>
+
+        <td data-field="risk_percent">
+          {% if trade.risk_percent is not none %}{{ "%.2f"|format(trade.risk_percent) }}{% else %}—{% endif %}
+        </td>
+
+        <td data-field="capital_used">
+          {% if trade.capital_used is not none %}{{ "%.2f"|format(trade.capital_used) }}{% else %}—{% endif %}
+        </td>
+
+        <td class="{{ trade.trade_type }}" data-field="target_price">
+          {% if trade.target_price is not none %}{{ "%.2f"|format(trade.target_price) }}{% else %}—{% endif %}
+        </td>
+
+        <td class="{{ trade.trade_type }}" data-field="stop_loss_price">
+          {% if trade.stop_loss_price is not none %}{{ "%.2f"|format(trade.stop_loss_price) }}{% else %}—{% endif %}
+        </td>
+
+        <td class="buy" data-field="total_reward">
+          {% if trade.total_reward is not none %}{{ "%.2f"|format(trade.total_reward) }}{% else %}—{% endif %}
+        </td>
+
+        <td class="sell" data-field="total_risk">
+          {% if trade.total_risk is not none %}{{ "%.2f"|format(trade.total_risk) }}{% else %}—{% endif %}
+        </td>
+
+        <td data-field="rr_ratio">{{ trade.rr_ratio if trade.rr_ratio is not none else "—" }}</td>
+
+        <td>{{ trade.symbol or "—" }}</td>
+
+        <td>{{ trade.comment|default('—') }}</td>
+
+        <td class="actions">
+          <button type="button" class="btn-journal" onclick="addToJournal({{ trade.id }})">
+            <i class="fas fa-book"></i> Add to Journal
+          </button>
+          <form action="/delete/{{ trade.id }}" method="POST" onsubmit="return confirm('Delete trade #{{ trade.id }}?');" style="display: inline;">
+            <button type="submit">Delete</button>
+          </form>
+          <form action="/detail/{{ trade.id }}" method="GET" style="display: inline;">
+            <button type="submit">Details</button>
+          </form>
+        </td>
+      </tr>
+      {% else %}
+      <tr>
+        <td colspan="15" style="text-align:center;">No saved trades found.</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+  async function addToJournal(tradeId) {
+    if (!confirm('Add this trade to your trading journal?')) {
+      return;
+    }
+    
+    try {
+      const response = await fetch('/add-to-journal', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ trade_id: tradeId })
+      });
+      
+      const result = await response.json();
+      
+      if (result.success) {
+        alert('Trade successfully added to journal!');
+        if (confirm('Would you like to view your trading journal?')) {
+          window.location.href = '/calculatentrade_journal/trades';
+        }
+      } else {
+        alert('Error: ' + (result.error || 'Failed to add trade to journal'));
+      }
+    } catch (error) {
+      console.error('Error:', error);
+      alert('Failed to add trade to journal. Please try again.');
+    }
+  }
+  
+  document.addEventListener('DOMContentLoaded', function() {
+    console.log('Saved trades page loaded');
+  });
+</script>
+{% endblock %}

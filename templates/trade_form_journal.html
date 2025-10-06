@@ -1,0 +1,215 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% if trade %}Edit Trade{% else %}Add New Trade{% endif %} - Trading Journal</title>
+    
+    <!-- Bootstrap 5 CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <style>
+        body {
+            background-color: #f5f7fa;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+        
+        .card {
+            border-radius: 10px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            border: none;
+        }
+        
+        .form-label {
+            font-weight: 600;
+            color: #2c3e50;
+        }
+        
+        .btn-primary {
+            background-color: #3498db;
+            border-color: #3498db;
+        }
+        
+        .btn-primary:hover {
+            background-color: #2980b9;
+            border-color: #2980b9;
+        }
+    </style>
+</head>
+<body>
+    <!-- Navigation -->
+    <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
+        <div class="container">
+            <a class="navbar-brand" href="{{ url_for('calculatentrade.dashboard') }}">
+                <i class="fas fa-chart-line me-2"></i>Trading Journal
+            </a>
+            <div class="navbar-nav ms-auto">
+                <a class="nav-link" href="{{ url_for('calculatentrade.get_trades') }}">
+                    <i class="fas fa-arrow-left me-1"></i>Back to Trades
+                </a>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container mt-4">
+        <div class="row justify-content-center">
+            <div class="col-md-8">
+                <div class="card">
+                    <div class="card-header">
+                        <h4 class="mb-0">
+                            <i class="fas fa-{% if trade %}edit{% else %}plus{% endif %} me-2"></i>
+                            {% if trade %}Edit Trade{% else %}Add New Trade{% endif %}
+                        </h4>
+                    </div>
+                    <div class="card-body">
+                        <!-- Flash Messages -->
+                        {% with messages = get_flashed_messages(with_categories=true) %}
+                            {% if messages %}
+                                {% for category, message in messages %}
+                                    <div class="alert alert-{{ 'danger' if category == 'error' else category }} alert-dismissible fade show">
+                                        {{ message }}
+                                        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                                    </div>
+                                {% endfor %}
+                            {% endif %}
+                        {% endwith %}
+
+                        <form method="POST" action="{{ url_for('calculatentrade.trade_form_post') if not trade else url_for('calculatentrade.edit_trade_form', trade_id=trade.id) }}">
+                            {% if trade %}
+                                <input type="hidden" name="trade_id" value="{{ trade.id }}">
+                            {% endif %}
+                            
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <div class="mb-3">
+                                        <label for="symbol" class="form-label">Symbol *</label>
+                                        <input type="text" class="form-control" id="symbol" name="symbol" 
+                                               value="{{ trade.symbol if trade else '' }}" required>
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="mb-3">
+                                        <label for="date" class="form-label">Date *</label>
+                                        <input type="date" class="form-control" id="date" name="date" 
+                                               value="{{ trade.date.strftime('%Y-%m-%d') if trade else '' }}" required>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <div class="mb-3">
+                                        <label for="trade_type" class="form-label">Trade Type *</label>
+                                        <select class="form-select" id="trade_type" name="trade_type" required>
+                                            <option value="long" {{ 'selected' if trade and trade.trade_type == 'long' else '' }}>Long</option>
+                                            <option value="short" {{ 'selected' if trade and trade.trade_type == 'short' else '' }}>Short</option>
+                                        </select>
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="mb-3">
+                                        <label for="quantity" class="form-label">Quantity *</label>
+                                        <input type="number" class="form-control" id="quantity" name="quantity" 
+                                               value="{{ trade.quantity if trade else '' }}" required min="1">
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <div class="mb-3">
+                                        <label for="entry_price" class="form-label">Entry Price *</label>
+                                        <input type="number" class="form-control" id="entry_price" name="entry_price" 
+                                               value="{{ trade.entry_price if trade else '' }}" required step="0.01" min="0">
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="mb-3">
+                                        <label for="exit_price" class="form-label">Exit Price *</label>
+                                        <input type="number" class="form-control" id="exit_price" name="exit_price" 
+                                               value="{{ trade.exit_price if trade else '' }}" required step="0.01" min="0">
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <div class="mb-3">
+                                        <label for="strategy_id" class="form-label">Strategy</label>
+                                        <select class="form-select" id="strategy_id" name="strategy_id">
+                                            <option value="">No Strategy</option>
+                                            {% for strategy in strategies %}
+                                                <option value="{{ strategy.id }}" 
+                                                        {{ 'selected' if trade and trade.strategy_id == strategy.id else '' }}>
+                                                    {{ strategy.name }}
+                                                </option>
+                                            {% endfor %}
+                                        </select>
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="mb-3">
+                                        <label for="pnl_display" class="form-label">P&L (Auto-calculated)</label>
+                                        <input type="text" class="form-control" id="pnl_display" readonly 
+                                               placeholder="Will be calculated automatically">
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="mb-3">
+                                <label for="notes" class="form-label">Notes</label>
+                                <textarea class="form-control" id="notes" name="notes" rows="3" 
+                                          placeholder="Add any notes about this trade...">{{ trade.notes if trade else '' }}</textarea>
+                            </div>
+
+                            <div class="d-flex justify-content-between">
+                                <a href="{{ url_for('calculatentrade.get_trades') }}" class="btn btn-secondary">
+                                    <i class="fas fa-times me-1"></i>Cancel
+                                </a>
+                                <button type="submit" class="btn btn-primary">
+                                    <i class="fas fa-save me-1"></i>
+                                    {% if trade %}Update Trade{% else %}Add Trade{% endif %}
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- JavaScript -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        // Auto-calculate P&L when prices or quantity change
+        function calculatePnL() {
+            const entryPrice = parseFloat(document.getElementById('entry_price').value) || 0;
+            const exitPrice = parseFloat(document.getElementById('exit_price').value) || 0;
+            const quantity = parseInt(document.getElementById('quantity').value) || 0;
+            const tradeType = document.getElementById('trade_type').value;
+            
+            let pnl = 0;
+            if (entryPrice && exitPrice && quantity) {
+                if (tradeType === 'long') {
+                    pnl = (exitPrice - entryPrice) * quantity;
+                } else {
+                    pnl = (entryPrice - exitPrice) * quantity;
+                }
+            }
+            
+            document.getElementById('pnl_display').value = pnl.toFixed(2);
+        }
+        
+        // Add event listeners
+        document.getElementById('entry_price').addEventListener('input', calculatePnL);
+        document.getElementById('exit_price').addEventListener('input', calculatePnL);
+        document.getElementById('quantity').addEventListener('input', calculatePnL);
+        document.getElementById('trade_type').addEventListener('change', calculatePnL);
+        
+        // Calculate on page load if editing
+        document.addEventListener('DOMContentLoaded', calculatePnL);
+    </script>
+</body>
+</html>

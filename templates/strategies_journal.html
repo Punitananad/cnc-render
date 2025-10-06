@@ -1,0 +1,1426 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Strategies Journal - Trading Dashboard</title>
+    
+    <!-- Chart.js for financial charts -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-annotation@2.0.1"></script>
+    
+    <!-- Font Awesome for icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <!-- Trading-inspired CSS -->
+    <style>
+        :root {
+            --primary-bg: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
+            --secondary-bg: linear-gradient(145deg, #1e293b 0%, #334155 100%);
+            --card-bg: rgba(51, 65, 85, 0.8);
+            --accent-green: #10b981;
+            --accent-red: #ef4444;
+            --accent-blue: #3b82f6;
+            --accent-purple: #8b5cf6;
+            --accent-yellow: #f59e0b;
+            --text-primary: #f8fafc;
+            --text-secondary: #cbd5e1;
+            --border-color: rgba(71, 85, 105, 0.3);
+            --glass-bg: rgba(255, 255, 255, 0.05);
+            --shadow-lg: 0 20px 25px -5px rgba(0, 0, 0, 0.3), 0 10px 10px -5px rgba(0, 0, 0, 0.2);
+        }
+        
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+        
+        body {
+            background: var(--primary-bg);
+            color: var(--text-primary);
+            line-height: 1.6;
+            min-height: 100vh;
+            position: relative;
+        }
+        
+        body::before {
+            content: '';
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: radial-gradient(circle at 20% 80%, rgba(59, 130, 246, 0.1) 0%, transparent 50%),
+                        radial-gradient(circle at 80% 20%, rgba(139, 92, 246, 0.1) 0%, transparent 50%);
+            pointer-events: none;
+            z-index: -1;
+        }
+        
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        
+        /* Header Styles */
+        .dashboard-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 30px;
+            padding: 25px;
+            background: var(--glass-bg);
+            backdrop-filter: blur(10px);
+            border-radius: 20px;
+            border: 1px solid var(--border-color);
+            box-shadow: var(--shadow-lg);
+        }
+        
+        .header-title {
+            font-size: 32px;
+            font-weight: 800;
+            background: linear-gradient(135deg, var(--accent-blue), var(--accent-purple), var(--accent-green));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            text-shadow: 0 0 30px rgba(59, 130, 246, 0.3);
+        }
+        
+        .header-stats {
+            display: flex;
+            gap: 20px;
+        }
+        
+        .stat-card {
+            background: var(--glass-bg);
+            backdrop-filter: blur(10px);
+            padding: 20px 25px;
+            border-radius: 16px;
+            min-width: 160px;
+            text-align: center;
+            border: 1px solid var(--border-color);
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
+            transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .stat-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 3px;
+            background: linear-gradient(90deg, var(--accent-blue), var(--accent-purple));
+        }
+        
+        .stat-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 12px 40px rgba(0, 0, 0, 0.3);
+        }
+        
+        .stat-value {
+            font-size: 24px;
+            font-weight: 700;
+            margin-bottom: 5px;
+        }
+        
+        .stat-label {
+            font-size: 14px;
+            color: var(--text-secondary);
+        }
+        
+        .positive { color: var(--accent-green); }
+        .negative { color: var(--accent-red); }
+        .neutral { color: var(--text-secondary); }
+        
+        /* Main Grid Layout */
+        .strategies-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+        
+        /* Strategy Card Styles */
+        .strategy-card {
+            background: var(--glass-bg);
+            backdrop-filter: blur(15px);
+            border-radius: 20px;
+            overflow: hidden;
+            transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+            border: 1px solid var(--border-color);
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+            position: relative;
+        }
+        
+        .strategy-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 4px;
+            background: linear-gradient(90deg, var(--accent-blue), var(--accent-purple), var(--accent-green));
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+        
+        .strategy-card:hover {
+            transform: translateY(-8px) scale(1.02);
+            box-shadow: 0 20px 50px rgba(0, 0, 0, 0.4);
+            border-color: var(--accent-blue);
+        }
+        
+        .strategy-card:hover::before {
+            opacity: 1;
+        }
+        
+        .strategy-header {
+            padding: 20px;
+            border-bottom: 1px solid var(--border-color);
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+        }
+        
+        .strategy-title {
+            font-size: 18px;
+            font-weight: 600;
+            margin-bottom: 5px;
+        }
+        
+        .strategy-description {
+            color: var(--text-secondary);
+            font-size: 14px;
+            margin-bottom: 10px;
+        }
+        
+        .strategy-status {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 6px 12px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 600;
+            backdrop-filter: blur(10px);
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+        }
+        
+        .strategy-status::before {
+            content: '';
+            width: 6px;
+            height: 6px;
+            border-radius: 50%;
+            background: currentColor;
+        }
+        
+        .status-active { 
+            background: rgba(16, 185, 129, 0.15); 
+            color: var(--accent-green);
+            border: 1px solid rgba(16, 185, 129, 0.3);
+        }
+        .status-archived { 
+            background: rgba(148, 163, 184, 0.15); 
+            color: var(--text-secondary);
+            border: 1px solid rgba(148, 163, 184, 0.3);
+        }
+        .status-draft { 
+            background: rgba(245, 158, 11, 0.15); 
+            color: var(--accent-yellow);
+            border: 1px solid rgba(245, 158, 11, 0.3);
+        }
+        
+        .strategy-body {
+            padding: 20px;
+        }
+        
+        .strategy-metrics {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+        
+        .metric {
+            text-align: center;
+        }
+        
+        .metric-value {
+            font-size: 22px;
+            font-weight: 800;
+            margin-bottom: 8px;
+            background: linear-gradient(135deg, var(--text-primary), var(--accent-blue));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+        
+        .metric-label {
+            font-size: 12px;
+            color: var(--text-secondary);
+        }
+        
+        .strategy-actions {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 8px;
+            margin-top: 15px;
+        }
+        
+        .strategy-actions .btn {
+            padding: 6px 10px;
+            font-size: 12px;
+        }
+        
+        @media (min-width: 400px) {
+            .strategy-actions {
+                grid-template-columns: repeat(4, 1fr);
+            }
+        }
+        
+        /* Strategy details styling */
+        .strategy-details {
+            margin: 15px 0;
+            padding: 15px 0;
+            border-top: 1px solid var(--border-color);
+        }
+        
+        .detail-row {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 8px;
+        }
+        
+        .detail-label {
+            color: var(--text-secondary);
+            font-size: 13px;
+        }
+        
+        .detail-value {
+            color: var(--text-primary);
+            font-size: 13px;
+            font-weight: 500;
+        }
+        
+        .btn {
+            padding: 12px 20px;
+            border-radius: 12px;
+            border: none;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            font-size: 14px;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .btn::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
+            transition: left 0.5s;
+        }
+        
+        .btn:hover::before {
+            left: 100%;
+        }
+        
+        .btn-primary {
+            background: linear-gradient(135deg, var(--accent-blue), var(--accent-purple));
+            color: white;
+            box-shadow: 0 4px 15px rgba(59, 130, 246, 0.3);
+        }
+        
+        .btn-primary:hover {
+            box-shadow: 0 8px 25px rgba(59, 130, 246, 0.4);
+            transform: translateY(-2px);
+        }
+        
+        .btn-secondary {
+            background: transparent;
+            color: var(--text-secondary);
+            border: 1px solid var(--border-color);
+        }
+        
+        .btn:hover {
+            opacity: 0.9;
+            transform: translateY(-2px);
+        }
+        
+        /* Performance Charts */
+        .charts-section {
+            margin-top: 40px;
+        }
+        
+        .section-title {
+            font-size: 22px;
+            margin-bottom: 20px;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .charts-container {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+        }
+        
+        .chart-card {
+            background: var(--glass-bg);
+            backdrop-filter: blur(15px);
+            border-radius: 20px;
+            padding: 25px;
+            border: 1px solid var(--border-color);
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+            transition: all 0.3s ease;
+        }
+        
+        .chart-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 15px 40px rgba(0, 0, 0, 0.3);
+        }
+        
+        .chart-title {
+            font-size: 16px;
+            margin-bottom: 15px;
+            font-weight: 600;
+            color: var(--text-secondary);
+        }
+        
+        /* Filters and Controls */
+        .filters-bar {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 25px;
+            flex-wrap: wrap;
+            gap: 15px;
+        }
+        
+        .search-box {
+            background: var(--glass-bg);
+            backdrop-filter: blur(10px);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            padding: 12px 18px;
+            color: var(--text-primary);
+            width: 280px;
+            transition: all 0.3s ease;
+        }
+        
+        .search-box:focus {
+            outline: none;
+            border-color: var(--accent-blue);
+            box-shadow: 0 0 20px rgba(59, 130, 246, 0.3);
+        }
+        
+        .filter-group {
+            display: flex;
+            gap: 10px;
+        }
+        
+        .filter-select {
+            background: var(--glass-bg);
+            backdrop-filter: blur(10px);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            padding: 12px 18px;
+            color: var(--text-primary);
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+        
+        .filter-select:focus {
+            outline: none;
+            border-color: var(--accent-blue);
+            box-shadow: 0 0 20px rgba(59, 130, 246, 0.3);
+        }
+        
+        /* Empty State */
+        .empty-state {
+            text-align: center;
+            padding: 60px 30px;
+            color: var(--text-secondary);
+            background: var(--glass-bg);
+            backdrop-filter: blur(15px);
+            border-radius: 20px;
+            border: 1px solid var(--border-color);
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+        }
+        
+        .empty-icon {
+            font-size: 64px;
+            margin-bottom: 20px;
+            background: linear-gradient(135deg, var(--accent-blue), var(--accent-purple));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            opacity: 0.7;
+        }
+        
+        /* Responsive Design */
+        @media (max-width: 1024px) {
+            .charts-container {
+                grid-template-columns: 1fr;
+            }
+        }
+        
+        @media (max-width: 768px) {
+            .strategies-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .header-stats {
+                flex-wrap: wrap;
+            }
+            
+            .filters-bar {
+                flex-direction: column;
+            }
+            
+            .search-box {
+                width: 100%;
+            }
+        }
+        
+        /* Animation for loading */
+        @keyframes pulse {
+            0% { opacity: 1; }
+            50% { opacity: 0.5; }
+            100% { opacity: 1; }
+        }
+        
+        .loading {
+            animation: pulse 1.5s infinite;
+        }
+        
+        /* Risk score indicator */
+        .risk-score {
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+        }
+        
+        .risk-dot {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            box-shadow: 0 0 10px currentColor;
+            animation: pulse 2s infinite;
+        }
+        
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.7; }
+        }
+        
+        .risk-low { background: var(--accent-green); }
+        .risk-medium { background: var(--accent-yellow); }
+        .risk-high { background: var(--accent-red); }
+        
+        /* Tag styles */
+        .strategy-tags {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 5px;
+            margin-top: 10px;
+        }
+        
+        .tag {
+            background: rgba(59, 130, 246, 0.15);
+            color: var(--accent-blue);
+            padding: 4px 10px;
+            border-radius: 16px;
+            font-size: 11px;
+            font-weight: 500;
+            border: 1px solid rgba(59, 130, 246, 0.3);
+            backdrop-filter: blur(5px);
+            transition: all 0.2s ease;
+        }
+        
+        .tag:hover {
+            background: rgba(59, 130, 246, 0.25);
+            transform: scale(1.05);
+        }
+        
+        /* Action buttons styling */
+        .action-buttons {
+            display: flex;
+            gap: 15px;
+            align-items: center;
+        }
+        
+        .empty-actions {
+            display: flex;
+            gap: 10px;
+            justify-content: center;
+            flex-wrap: wrap;
+        }
+        
+        /* Modal styles */
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.8);
+            backdrop-filter: blur(10px);
+            z-index: 1000;
+            align-items: center;
+            justify-content: center;
+            animation: fadeIn 0.3s ease;
+        }
+        
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+        
+        .modal-content {
+            background: var(--glass-bg);
+            backdrop-filter: blur(20px);
+            border-radius: 24px;
+            padding: 40px;
+            width: 90%;
+            max-width: 650px;
+            max-height: 85vh;
+            overflow-y: auto;
+            border: 1px solid var(--border-color);
+            box-shadow: 0 25px 50px rgba(0, 0, 0, 0.5);
+            animation: slideUp 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        
+        @keyframes slideUp {
+            from {
+                opacity: 0;
+                transform: translateY(50px) scale(0.9);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0) scale(1);
+            }
+        }
+        
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 25px;
+            padding-bottom: 15px;
+            border-bottom: 1px solid var(--border-color);
+        }
+        
+        .modal-title {
+            font-size: 24px;
+            font-weight: 600;
+            color: var(--text-primary);
+        }
+        
+        .close-btn {
+            background: none;
+            border: none;
+            font-size: 24px;
+            color: var(--text-secondary);
+            cursor: pointer;
+            padding: 5px;
+        }
+        
+        .close-btn:hover {
+            color: var(--text-primary);
+        }
+        
+        .form-group {
+            margin-bottom: 20px;
+        }
+        
+        .form-label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 600;
+            color: var(--text-primary);
+        }
+        
+        .form-input, .form-select, .form-textarea {
+            width: 100%;
+            padding: 14px 18px;
+            background: rgba(15, 23, 42, 0.6);
+            backdrop-filter: blur(10px);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            color: var(--text-primary);
+            font-size: 14px;
+            transition: all 0.3s ease;
+        }
+        
+        .form-input:focus, .form-select:focus, .form-textarea:focus {
+            outline: none;
+            border-color: var(--accent-blue);
+            box-shadow: 0 0 20px rgba(59, 130, 246, 0.3);
+            background: rgba(15, 23, 42, 0.8);
+        }
+        
+        .form-textarea {
+            resize: vertical;
+            min-height: 80px;
+        }
+        
+        .form-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+        }
+        
+        .modal-actions {
+            display: flex;
+            justify-content: flex-end;
+            gap: 10px;
+            margin-top: 25px;
+            padding-top: 20px;
+            border-top: 1px solid var(--border-color);
+        }
+        
+        @media (max-width: 768px) {
+            .action-buttons {
+                flex-direction: column;
+            }
+            
+            .form-row {
+                grid-template-columns: 1fr;
+            }
+            
+            .modal-content {
+                width: 95%;
+                padding: 20px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- Dashboard Header -->
+        <div class="dashboard-header">
+            <div>
+                <h1 class="header-title">
+                    <i class="fas fa-chart-line"></i> Trading Strategies
+                </h1>
+                <p>Manage and analyze your trading strategies</p>
+            </div>
+            <div class="header-stats">
+                <div class="stat-card">
+                    <div class="stat-value positive">{{ "₹{:,.2f}".format(total_profit) if total_profit else "₹0.00" }}</div>
+                    <div class="stat-label">Total Profit</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value">{{ active_strategies }}</div>
+                    <div class="stat-label">Active Strategies</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value">{{ "{:.1f}%".format(avg_win_rate) if avg_win_rate else "0.0%" }}</div>
+                    <div class="stat-label">Avg Win Rate</div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Filters and Search -->
+        <div class="filters-bar">
+            <input type="text" class="search-box" placeholder="Search strategies..." id="searchInput">
+            <div class="filter-group">
+                <select class="filter-select" id="statusFilter">
+                    <option value="all">All Status</option>
+                    <option value="active">Active</option>
+                    <option value="archived">Archived</option>
+                    <option value="draft">Draft</option>
+                </select>
+                <select class="filter-select" id="marketFilter">
+                    <option value="all">All Markets</option>
+                    <option value="equity">Equity</option>
+                    <option value="futures">Futures</option>
+                    <option value="options">Options</option>
+                </select>
+                <select class="filter-select" id="sortBy">
+                    <option value="performance">Sort by Performance</option>
+                    <option value="winrate">Sort by Win Rate</option>
+                    <option value="trades">Sort by Trade Count</option>
+                    <option value="recent">Sort by Recent</option>
+                </select>
+            </div>
+            <div class="action-buttons">
+                <button class="btn btn-primary" id="newStrategyBtn">
+                    <i class="fas fa-plus"></i> New Strategy
+                </button>
+                <button class="btn btn-secondary" id="newTradeBtn">
+                    <i class="fas fa-chart-line"></i> New Trade
+                </button>
+            </div>
+        </div>
+        
+        <!-- Strategies Grid -->
+        <div class="strategies-grid" id="strategiesContainer">
+            {% if strategies %}
+                {% for strategy in strategies %}
+                <div class="strategy-card" data-status="{{ strategy.status }}" data-market="{{ strategy.market_type or 'all' }}">
+                    <div class="strategy-header">
+                        <div>
+                            <h3 class="strategy-title">{{ strategy.name }}</h3>
+                            <p class="strategy-description">{{ strategy.description or "No description" }}</p>
+                            <div class="strategy-tags">
+                                {% if strategy.tags %}
+                                    {% for tag in strategy.tags %}
+                                        <span class="tag">{{ tag }}</span>
+                                    {% endfor %}
+                                {% endif %}
+                            </div>
+                        </div>
+                        <span class="strategy-status status-{{ strategy.status }}">{{ strategy.status|title }}</span>
+                    </div>
+                    
+                    <div class="strategy-body">
+                        <div class="strategy-metrics">
+                            <div class="metric">
+                                <div class="metric-value {% if strategy.total_pnl > 0 %}positive{% elif strategy.total_pnl < 0 %}negative{% endif %}">
+                                    {{ "₹{:,.2f}".format(strategy.total_pnl) if strategy.total_pnl else "₹0.00" }}
+                                </div>
+                                <div class="metric-label">Total P&L</div>
+                            </div>
+                            <div class="metric">
+                                <div class="metric-value">{{ "{:.1f}%".format(strategy.win_rate) if strategy.win_rate else "0.0%" }}</div>
+                                <div class="metric-label">Win Rate</div>
+                            </div>
+                            <div class="metric">
+                                <div class="metric-value">{{ strategy.total_trades }}</div>
+                                <div class="metric-label">Total Trades</div>
+                            </div>
+                            <div class="metric">
+                                <div class="metric-value">
+                                    <div class="risk-score">
+                                        <span class="risk-dot 
+                                            {% if strategy.risk_score <= 3 %}risk-low
+                                            {% elif strategy.risk_score <= 7 %}risk-medium
+                                            {% else %}risk-high{% endif %}">
+                                        </span>
+                                        {{ strategy.risk_score or "N/A" }}
+                                    </div>
+                                </div>
+                                <div class="metric-label">Risk Score</div>
+                            </div>
+                        </div>
+                        
+                        <div class="strategy-details">
+                            <div class="detail-row">
+                                <span class="detail-label">Market:</span>
+                                <span class="detail-value">{{ strategy.market_type or "N/A" }}</span>
+                            </div>
+                            <div class="detail-row">
+                                <span class="detail-label">Timeframe:</span>
+                                <span class="detail-value">{{ strategy.timeframe or "N/A" }}</span>
+                            </div>
+                            <div class="detail-row">
+                                <span class="detail-label">Sharpe Ratio:</span>
+                                <span class="detail-value">{{ "{:.2f}".format(strategy.sharpe_ratio) if strategy.sharpe_ratio else "N/A" }}</span>
+                            </div>
+                        </div>
+                        
+                        <div class="strategy-actions">
+                            <button class="btn btn-secondary" onclick="viewStrategy({{ strategy.id }})">
+                                <i class="fas fa-eye"></i> View
+                            </button>
+                            <button class="btn btn-secondary" onclick="editStrategy({{ strategy.id }})">
+                                <i class="fas fa-edit"></i> Edit
+                            </button>
+                            <button class="btn btn-secondary" onclick="createTradeForStrategy({{ strategy.id }})">
+                                <i class="fas fa-plus"></i> Trade
+                            </button>
+                            <button class="btn btn-primary" onclick="analyzeStrategy({{ strategy.id }})">
+                                <i class="fas fa-chart-bar"></i> Analyze
+                            </button>
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+            {% else %}
+                <div class="empty-state">
+                    <div class="empty-icon">
+                        <i class="fas fa-chart-line"></i>
+                    </div>
+                    <h3>No Strategies Found</h3>
+                    <p>Create your first trading strategy to get started</p>
+                    <div class="empty-actions">
+                        <button class="btn btn-primary" style="margin-top: 15px;" id="createFirstStrategy">
+                            <i class="fas fa-plus"></i> Create Strategy
+                        </button>
+                        <button class="btn btn-secondary" style="margin-top: 15px;" id="createFirstTrade">
+                            <i class="fas fa-chart-line"></i> Create Trade
+                        </button>
+                    </div>
+                </div>
+            {% endif %}
+        </div>
+        
+        <!-- Performance Charts Section -->
+        {% if strategies %}
+        <div class="charts-section">
+            <h2 class="section-title">
+                <i class="fas fa-chart-area"></i> Strategy Performance
+            </h2>
+            
+            <div class="charts-container">
+                <div class="chart-card">
+                    <h3 class="chart-title">Strategy P&L Comparison</h3>
+                    <canvas id="strategyPnlChart" height="250"></canvas>
+                </div>
+                
+                <div class="chart-card">
+                    <h3 class="chart-title">Win Rate Distribution</h3>
+                    <canvas id="winRateChart" height="250"></canvas>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+    </div>
+    
+    <!-- Strategy Creation Modal -->
+    <div id="strategyModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 class="modal-title">
+                    <i class="fas fa-plus-circle"></i> Create New Strategy
+                </h2>
+                <button class="close-btn" onclick="closeStrategyForm()">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            
+            <form id="strategyForm">
+                <div class="form-group">
+                    <label class="form-label" for="strategyName">Strategy Name *</label>
+                    <input type="text" id="strategyName" name="name" class="form-input" required placeholder="Enter strategy name">
+                </div>
+                
+                <div class="form-group">
+                    <label class="form-label" for="strategyDescription">Description</label>
+                    <textarea id="strategyDescription" name="description" class="form-textarea" placeholder="Describe your trading strategy"></textarea>
+                </div>
+                
+                <div class="form-row">
+                    <div class="form-group">
+                        <label class="form-label" for="marketType">Market Type</label>
+                        <select id="marketType" name="market_type" class="form-select">
+                            <option value="">Select Market</option>
+                            <option value="equity">Equity</option>
+                            <option value="futures">Futures</option>
+                            <option value="options">Options</option>
+                            <option value="forex">Forex</option>
+                            <option value="crypto">Cryptocurrency</option>
+                        </select>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label class="form-label" for="timeframe">Timeframe</label>
+                        <select id="timeframe" name="timeframe" class="form-select">
+                            <option value="">Select Timeframe</option>
+                            <option value="1m">1 Minute</option>
+                            <option value="5m">5 Minutes</option>
+                            <option value="15m">15 Minutes</option>
+                            <option value="1h">1 Hour</option>
+                            <option value="4h">4 Hours</option>
+                            <option value="1d">Daily</option>
+                            <option value="1w">Weekly</option>
+                        </select>
+                    </div>
+                </div>
+                
+                <div class="form-row">
+                    <div class="form-group">
+                        <label class="form-label" for="riskScore">Risk Score (1-10)</label>
+                        <input type="number" id="riskScore" name="risk_score" class="form-input" min="1" max="10" placeholder="5">
+                    </div>
+                    
+                    <div class="form-group">
+                        <label class="form-label" for="strategyStatus">Status</label>
+                        <select id="strategyStatus" name="status" class="form-select">
+                            <option value="draft">Draft</option>
+                            <option value="active">Active</option>
+                            <option value="archived">Archived</option>
+                        </select>
+                    </div>
+                </div>
+                
+                <div class="form-group">
+                    <label class="form-label" for="entryRules">Entry Rules</label>
+                    <textarea id="entryRules" name="entry_rules" class="form-textarea" placeholder="Define your entry conditions"></textarea>
+                </div>
+                
+                <div class="form-group">
+                    <label class="form-label" for="exitRules">Exit Rules</label>
+                    <textarea id="exitRules" name="exit_rules" class="form-textarea" placeholder="Define your exit conditions"></textarea>
+                </div>
+                
+                <div class="form-row">
+                    <div class="form-group">
+                        <label class="form-label" for="stopLoss">Stop Loss (%)</label>
+                        <input type="number" id="stopLoss" name="stop_loss_pct" class="form-input" step="0.1" placeholder="2.0">
+                    </div>
+                    
+                    <div class="form-group">
+                        <label class="form-label" for="takeProfit">Take Profit (%)</label>
+                        <input type="number" id="takeProfit" name="take_profit_pct" class="form-input" step="0.1" placeholder="5.0">
+                    </div>
+                </div>
+                
+                <div class="form-group">
+                    <label class="form-label" for="tags">Tags (comma-separated)</label>
+                    <input type="text" id="tags" name="tags" class="form-input" placeholder="momentum, breakout, swing">
+                </div>
+            </form>
+            
+            <div class="modal-actions">
+                <button type="button" class="btn btn-secondary" onclick="closeStrategyForm()">
+                    Cancel
+                </button>
+                <button type="button" class="btn btn-primary" onclick="submitStrategy(event)">
+                    <i class="fas fa-save"></i> Create Strategy
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Filter and search functionality
+        document.getElementById('searchInput').addEventListener('input', filterStrategies);
+        document.getElementById('statusFilter').addEventListener('change', filterStrategies);
+        document.getElementById('marketFilter').addEventListener('change', filterStrategies);
+        document.getElementById('sortBy').addEventListener('change', sortStrategies);
+        
+        function filterStrategies() {
+            const searchTerm = document.getElementById('searchInput').value.toLowerCase();
+            const statusFilter = document.getElementById('statusFilter').value;
+            const marketFilter = document.getElementById('marketFilter').value;
+            
+            const strategyCards = document.querySelectorAll('.strategy-card');
+            
+            strategyCards.forEach(card => {
+                const title = card.querySelector('.strategy-title').textContent.toLowerCase();
+                const description = card.querySelector('.strategy-description').textContent.toLowerCase();
+                const status = card.getAttribute('data-status');
+                const market = card.getAttribute('data-market');
+                
+                const matchesSearch = title.includes(searchTerm) || description.includes(searchTerm);
+                const matchesStatus = statusFilter === 'all' || status === statusFilter;
+                const matchesMarket = marketFilter === 'all' || market === marketFilter;
+                
+                if (matchesSearch && matchesStatus && matchesMarket) {
+                    card.style.display = 'block';
+                } else {
+                    card.style.display = 'none';
+                }
+            });
+        }
+        
+        function sortStrategies() {
+            const sortBy = document.getElementById('sortBy').value;
+            const container = document.getElementById('strategiesContainer');
+            const strategyCards = Array.from(container.querySelectorAll('.strategy-card'));
+            
+            strategyCards.sort((a, b) => {
+                let aValue, bValue;
+                
+                switch(sortBy) {
+                    case 'performance':
+                        aValue = parseFloat(a.querySelector('.metric-value').textContent.replace(/[^0-9.-]/g, '') || 0);
+                        bValue = parseFloat(b.querySelector('.metric-value').textContent.replace(/[^0-9.-]/g, '') || 0);
+                        return bValue - aValue;
+                        
+                    case 'winrate':
+                        aValue = parseFloat(a.querySelectorAll('.metric-value')[1].textContent) || 0;
+                        bValue = parseFloat(b.querySelectorAll('.metric-value')[1].textContent) || 0;
+                        return bValue - aValue;
+                        
+                    case 'trades':
+                        aValue = parseInt(a.querySelectorAll('.metric-value')[2].textContent) || 0;
+                        bValue = parseInt(b.querySelectorAll('.metric-value')[2].textContent) || 0;
+                        return bValue - aValue;
+                        
+                    case 'recent':
+                    default:
+                        return 0; // Default order (as rendered by server)
+                }
+            });
+            
+            // Clear and re-append sorted cards
+            container.innerHTML = '';
+            strategyCards.forEach(card => container.appendChild(card));
+        }
+        
+        // Initialize charts if strategies exist
+        {% if strategies %}
+        document.addEventListener('DOMContentLoaded', function() {
+            // Strategy P&L Comparison Chart
+            const pnlCtx = document.getElementById('strategyPnlChart').getContext('2d');
+            const pnlChart = new Chart(pnlCtx, {
+                type: 'bar',
+                data: {
+                    labels: [{% for s in strategies %}'{{ s.name }}'{% if not loop.last %}, {% endif %}{% endfor %}],
+                    datasets: [{
+                        label: 'Total P&L',
+                        data: [{% for s in strategies %}{{ s.total_pnl or 0 }}{% if not loop.last %}, {% endif %}{% endfor %}],
+                        backgroundColor: [{% for s in strategies %}'{{ "#10b981" if s.total_pnl and s.total_pnl > 0 else "#ef4444" if s.total_pnl and s.total_pnl < 0 else "#6b7280" }}'{% if not loop.last %}, {% endif %}{% endfor %}],
+                        borderColor: [{% for s in strategies %}'{{ "#10b981" if s.total_pnl and s.total_pnl > 0 else "#ef4444" if s.total_pnl and s.total_pnl < 0 else "#6b7280" }}'{% if not loop.last %}, {% endif %}{% endfor %}],
+                        borderWidth: 1
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    plugins: {
+                        legend: {
+                            display: false
+                        },
+                        tooltip: {
+                            callbacks: {
+                                label: function(context) {
+                                    return `P&L: ₹${context.raw.toFixed(2)}`;
+                                }
+                            }
+                        }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            ticks: {
+                                callback: function(value) {
+                                    return '₹' + value;
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+            
+            // Win Rate Distribution Chart
+            const winRateCtx = document.getElementById('winRateChart').getContext('2d');
+            const winRateChart = new Chart(winRateCtx, {
+                type: 'doughnut',
+                data: {
+                    labels: ['High Win Rate (>60%)', 'Medium Win Rate (40-60%)', 'Low Win Rate (<40%)'],
+                    datasets: [{
+                        data: [
+                            {{ strategies | selectattr("win_rate", ">", 60) | list | length }},
+                            {{ strategies | selectattr("win_rate", ">=", 40) | selectattr("win_rate", "<=", 60) | list | length }},
+                            {{ strategies | selectattr("win_rate", "<", 40) | list | length }}
+                        ],
+                        backgroundColor: [
+                            '#10b981',
+                            '#f59e0b',
+                            '#ef4444'
+                        ],
+                        borderWidth: 1
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    plugins: {
+                        legend: {
+                            position: 'bottom'
+                        }
+                    }
+                }
+            });
+        });
+        {% endif %}
+        
+        // Button actions
+        document.getElementById('newStrategyBtn').addEventListener('click', function() {
+            openStrategyForm();
+        });
+        
+        document.getElementById('newTradeBtn').addEventListener('click', function() {
+            window.location.href = "{{ url_for('calculatentrade.trade_form') }}";
+        });
+        
+        {% if not strategies %}
+        document.getElementById('createFirstStrategy').addEventListener('click', function() {
+            openStrategyForm();
+        });
+        
+        document.getElementById('createFirstTrade').addEventListener('click', function() {
+            window.location.href = "{{ url_for('calculatentrade.trade_form') }}";
+        });
+        {% endif %}
+        
+        // Strategy form functionality
+        function openStrategyForm() {
+            document.getElementById('strategyModal').style.display = 'flex';
+        }
+        
+        function closeStrategyForm() {
+            document.getElementById('strategyModal').style.display = 'none';
+            document.getElementById('strategyForm').reset();
+        }
+        
+        function submitStrategy() {
+            const form = document.getElementById('strategyForm');
+            
+            // Basic validation
+            const name = document.getElementById('strategyName').value.trim();
+            if (!name) {
+                alert('Please enter a strategy name');
+                return;
+            }
+            
+            const formData = new FormData(form);
+            
+            // Show loading state
+            const submitBtn = event.target;
+            const originalText = submitBtn.innerHTML;
+            submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Creating...';
+            submitBtn.disabled = true;
+            
+            fetch('/calculatentrade_journal/strategies/create', {
+                method: 'POST',
+                body: formData
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    closeStrategyForm();
+                    location.reload();
+                } else {
+                    alert('Error creating strategy: ' + (data.message || 'Unknown error'));
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                alert('Error creating strategy. Please try again.');
+            })
+            .finally(() => {
+                submitBtn.innerHTML = originalText;
+                submitBtn.disabled = false;
+            });
+        }
+        
+        // Close modal when clicking outside
+        document.getElementById('strategyModal').addEventListener('click', function(e) {
+            if (e.target === this) {
+                closeStrategyForm();
+            }
+        });
+        
+        // Close modal with Escape key
+        document.addEventListener('keydown', function(e) {
+            if (e.key === 'Escape' && document.getElementById('strategyModal').style.display === 'flex') {
+                closeStrategyForm();
+            }
+        });
+        
+        function viewStrategy(id) {
+            // Create and show strategy view modal
+            showStrategyDetails(id);
+        }
+        
+        function editStrategy(id) {
+            window.location.href = `/calculatentrade_journal/strategies/${id}/edit`;
+        }
+        
+        function analyzeStrategy(id) {
+            // Create and show strategy analysis modal
+            showStrategyAnalysis(id);
+        }
+        
+        function showStrategyDetails(id) {
+            // Find the strategy card
+            const strategyCard = document.querySelector(`[onclick*="viewStrategy(${id})"]`).closest('.strategy-card');
+            const title = strategyCard.querySelector('.strategy-title').textContent;
+            const description = strategyCard.querySelector('.strategy-description').textContent;
+            const status = strategyCard.querySelector('.strategy-status').textContent;
+            const metrics = strategyCard.querySelectorAll('.metric-value');
+            const details = strategyCard.querySelectorAll('.detail-value');
+            
+            const modalHtml = `
+                <div id="viewModal" class="modal" style="display: flex;">
+                    <div class="modal-content">
+                        <div class="modal-header">
+                            <h2 class="modal-title">
+                                <i class="fas fa-eye"></i> ${title}
+                            </h2>
+                            <button class="close-btn" onclick="closeViewModal()">
+                                <i class="fas fa-times"></i>
+                            </button>
+                        </div>
+                        
+                        <div style="padding: 20px 0;">
+                            <div class="form-group">
+                                <label class="form-label">Description</label>
+                                <p style="color: var(--text-secondary); margin: 10px 0;">${description}</p>
+                            </div>
+                            
+                            <div class="form-row">
+                                <div class="form-group">
+                                    <label class="form-label">Status</label>
+                                    <p style="color: var(--accent-green); margin: 10px 0;">${status}</p>
+                                </div>
+                                <div class="form-group">
+                                    <label class="form-label">Market</label>
+                                    <p style="color: var(--text-secondary); margin: 10px 0;">${details[0].textContent}</p>
+                                </div>
+                            </div>
+                            
+                            <div class="form-row">
+                                <div class="form-group">
+                                    <label class="form-label">Total P&L</label>
+                                    <p style="color: ${metrics[0].classList.contains('positive') ? 'var(--accent-green)' : metrics[0].classList.contains('negative') ? 'var(--accent-red)' : 'var(--text-secondary)'}; font-size: 18px; font-weight: 600; margin: 10px 0;">${metrics[0].textContent}</p>
+                                </div>
+                                <div class="form-group">
+                                    <label class="form-label">Win Rate</label>
+                                    <p style="color: var(--accent-blue); font-size: 18px; font-weight: 600; margin: 10px 0;">${metrics[1].textContent}</p>
+                                </div>
+                            </div>
+                            
+                            <div class="form-row">
+                                <div class="form-group">
+                                    <label class="form-label">Total Trades</label>
+                                    <p style="color: var(--text-secondary); font-size: 18px; font-weight: 600; margin: 10px 0;">${metrics[2].textContent}</p>
+                                </div>
+                                <div class="form-group">
+                                    <label class="form-label">Risk Score</label>
+                                    <p style="color: var(--text-secondary); font-size: 18px; font-weight: 600; margin: 10px 0;">${metrics[3].textContent}</p>
+                                </div>
+                            </div>
+                            
+                            <div class="form-row">
+                                <div class="form-group">
+                                    <label class="form-label">Timeframe</label>
+                                    <p style="color: var(--text-secondary); margin: 10px 0;">${details[1].textContent}</p>
+                                </div>
+                                <div class="form-group">
+                                    <label class="form-label">Sharpe Ratio</label>
+                                    <p style="color: var(--text-secondary); margin: 10px 0;">${details[2].textContent}</p>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="modal-actions">
+                            <button type="button" class="btn btn-secondary" onclick="closeViewModal()">
+                                Close
+                            </button>
+                            <button type="button" class="btn btn-primary" onclick="editStrategy(${id})">
+                                <i class="fas fa-edit"></i> Edit Strategy
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            `;
+            
+            document.body.insertAdjacentHTML('beforeend', modalHtml);
+        }
+        
+        function showStrategyAnalysis(id) {
+            const strategyCard = document.querySelector(`[onclick*="analyzeStrategy(${id})"]`).closest('.strategy-card');
+            const title = strategyCard.querySelector('.strategy-title').textContent;
+            const metrics = strategyCard.querySelectorAll('.metric-value');
+            
+            const modalHtml = `
+                <div id="analysisModal" class="modal" style="display: flex;">
+                    <div class="modal-content" style="max-width: 800px;">
+                        <div class="modal-header">
+                            <h2 class="modal-title">
+                                <i class="fas fa-chart-bar"></i> ${title} Analysis
+                            </h2>
+                            <button class="close-btn" onclick="closeAnalysisModal()">
+                                <i class="fas fa-times"></i>
+                            </button>
+                        </div>
+                        
+                        <div style="padding: 20px 0;">
+                            <div class="charts-container" style="grid-template-columns: 1fr;">
+                                <div class="chart-card">
+                                    <h3 class="chart-title">Performance Metrics</h3>
+                                    <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 20px; margin: 20px 0;">
+                                        <div style="text-align: center; padding: 20px; background: var(--glass-bg); border-radius: 12px;">
+                                            <div style="font-size: 24px; font-weight: 700; color: ${metrics[0].classList.contains('positive') ? 'var(--accent-green)' : metrics[0].classList.contains('negative') ? 'var(--accent-red)' : 'var(--text-secondary)'}; margin-bottom: 8px;">${metrics[0].textContent}</div>
+                                            <div style="color: var(--text-secondary); font-size: 14px;">Total P&L</div>
+                                        </div>
+                                        <div style="text-align: center; padding: 20px; background: var(--glass-bg); border-radius: 12px;">
+                                            <div style="font-size: 24px; font-weight: 700; color: var(--accent-blue); margin-bottom: 8px;">${metrics[1].textContent}</div>
+                                            <div style="color: var(--text-secondary); font-size: 14px;">Win Rate</div>
+                                        </div>
+                                        <div style="text-align: center; padding: 20px; background: var(--glass-bg); border-radius: 12px;">
+                                            <div style="font-size: 24px; font-weight: 700; color: var(--text-primary); margin-bottom: 8px;">${metrics[2].textContent}</div>
+                                            <div style="color: var(--text-secondary); font-size: 14px;">Total Trades</div>
+                                        </div>
+                                        <div style="text-align: center; padding: 20px; background: var(--glass-bg); border-radius: 12px;">
+                                            <div style="font-size: 24px; font-weight: 700; color: var(--accent-yellow); margin-bottom: 8px;">${metrics[3].textContent}</div>
+                                            <div style="color: var(--text-secondary); font-size: 14px;">Risk Score</div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div class="form-group" style="margin-top: 20px;">
+                                <label class="form-label">Analysis Summary</label>
+                                <div style="background: var(--glass-bg); padding: 20px; border-radius: 12px; margin: 10px 0;">
+                                    <p style="color: var(--text-secondary); margin-bottom: 15px;">Based on the current metrics:</p>
+                                    <ul style="color: var(--text-secondary); margin-left: 20px;">
+                                        <li style="margin-bottom: 8px;">Performance: ${parseFloat(metrics[0].textContent.replace(/[^0-9.-]/g, '')) > 0 ? 'Profitable strategy' : parseFloat(metrics[0].textContent.replace(/[^0-9.-]/g, '')) < 0 ? 'Loss-making strategy' : 'Break-even strategy'}</li>
+                                        <li style="margin-bottom: 8px;">Win Rate: ${parseFloat(metrics[1].textContent) > 60 ? 'High win rate (>60%)' : parseFloat(metrics[1].textContent) > 40 ? 'Moderate win rate (40-60%)' : 'Low win rate (<40%)'}</li>
+                                        <li style="margin-bottom: 8px;">Trade Volume: ${parseInt(metrics[2].textContent) > 50 ? 'High activity' : parseInt(metrics[2].textContent) > 20 ? 'Moderate activity' : 'Low activity'}</li>
+                                        <li style="margin-bottom: 8px;">Risk Level: ${parseFloat(metrics[3].textContent) > 7 ? 'High risk' : parseFloat(metrics[3].textContent) > 4 ? 'Moderate risk' : 'Low risk'}</li>
+                                    </ul>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="modal-actions">
+                            <button type="button" class="btn btn-secondary" onclick="closeAnalysisModal()">
+                                Close
+                            </button>
+                            <button type="button" class="btn btn-primary" onclick="createTradeForStrategy(${id})">
+                                <i class="fas fa-plus"></i> Create Trade
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            `;
+            
+            document.body.insertAdjacentHTML('beforeend', modalHtml);
+        }
+        
+        function closeViewModal() {
+            const modal = document.getElementById('viewModal');
+            if (modal) {
+                modal.remove();
+            }
+        }
+        
+        function closeAnalysisModal() {
+            const modal = document.getElementById('analysisModal');
+            if (modal) {
+                modal.remove();
+            }
+        }
+        
+        function createTradeForStrategy(strategyId) {
+            // Redirect to trade form with strategy ID as parameter
+            window.location.href = `{{ url_for('calculatentrade.trade_form') }}?strategy_id=${strategyId}`;
+        }
+        
+        // Add some dynamic behavior for a more engaging UI
+        document.querySelectorAll('.strategy-card').forEach(card => {
+            card.addEventListener('mouseenter', function() {
+                this.style.borderColor = '#3b82f6';
+            });
+            
+            card.addEventListener('mouseleave', function() {
+                this.style.borderColor = '#475569';
+            });
+        });
+    </script>
+</body>
+</html>

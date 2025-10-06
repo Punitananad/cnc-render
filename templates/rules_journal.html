@@ -1,0 +1,533 @@
+{% extends "base_new_journal.html" %}
+
+{% block title %}Trading Rules | Calculate N Trade{% endblock %}
+
+{% block extra_css %}
+<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+<style>
+.rule-card {
+    transition: all 0.3s ease;
+    border-left: 4px solid #e5e7eb;
+}
+.rule-card.priority-high { border-left-color: #dc3545; }
+.rule-card.priority-medium { border-left-color: #ffc107; }
+.rule-card.priority-low { border-left-color: #198754; }
+.rule-card:hover { transform: translateY(-2px); box-shadow: 0 4px 12px rgba(0,0,0,0.1); }
+.compliance-badge { font-size: 0.75rem; }
+.tag-badge { font-size: 0.7rem; padding: 0.2rem 0.5rem; }
+.filter-section { background: #f8f9fa; border-radius: 8px; padding: 1rem; margin-bottom: 1.5rem; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="flex justify-between items-center mb-6">
+  <h1 class="text-2xl font-bold text-gray-800 dark:text-white">Trading Rules</h1>
+  <button class="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700" data-bs-toggle="modal" data-bs-target="#ruleModal">
+    <i class="fas fa-plus mr-2"></i>Add Rule
+  </button>
+</div>
+
+<!-- Filters Section -->
+<div class="bg-gray-50 dark:bg-gray-800 rounded-lg p-4 mb-6">
+  <div class="grid grid-cols-1 md:grid-cols-5 gap-4">
+    <div>
+      <select class="w-full px-3 py-2 border rounded-md" id="categoryFilter">
+        <option value="">All Categories</option>
+        {% for category in categories %}
+        <option value="{{ category }}">{{ category }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div>
+      <select class="w-full px-3 py-2 border rounded-md" id="priorityFilter">
+        <option value="">All Priorities</option>
+        <option value="high">High</option>
+        <option value="medium">Medium</option>
+        <option value="low">Low</option>
+      </select>
+    </div>
+    <div>
+      <select class="w-full px-3 py-2 border rounded-md" id="activeFilter">
+        <option value="">All Rules</option>
+        <option value="true">Active Only</option>
+        <option value="false">Inactive Only</option>
+      </select>
+    </div>
+    <div>
+      <input type="text" class="w-full px-3 py-2 border rounded-md" id="tagFilter" placeholder="Filter by tag...">
+    </div>
+    <div>
+      <button class="w-full px-3 py-2 bg-gray-200 text-gray-700 rounded-md hover:bg-gray-300" onclick="clearFilters()">
+        <i class="fas fa-times mr-1"></i>Clear
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- Rules Grid -->
+<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6" id="rulesContainer">
+  {% for rule in rules %}
+  <div class="rule-item" 
+       data-category="{{ rule.category }}" 
+       data-priority="{{ rule.priority }}" 
+       data-active="{{ rule.active|lower }}"
+       data-tags="{{ rule.tags|join(',') }}">
+    <div class="bg-white dark:bg-gray-800 rounded-lg shadow-md p-4 rule-card priority-{{ rule.priority }} h-full">
+      <div class="flex justify-between items-start mb-3">
+        <div class="flex-1">
+          <h3 class="font-semibold text-lg mb-2">{{ rule.title }}</h3>
+          <div class="flex flex-wrap gap-2 mb-2">
+            <span class="px-2 py-1 bg-gray-200 text-gray-700 rounded text-xs">{{ rule.category }}</span>
+            <span class="px-2 py-1 rounded text-xs text-white
+              {% if rule.priority == 'high' %}bg-red-500
+              {% elif rule.priority == 'medium' %}bg-yellow-500
+              {% else %}bg-green-500{% endif %}">
+              {{ rule.priority.title() }}
+            </span>
+            <span class="px-2 py-1 rounded text-xs text-white
+              {% if rule.compliance_percentage >= 90 %}bg-green-500
+              {% elif rule.compliance_percentage >= 70 %}bg-yellow-500
+              {% else %}bg-red-500{% endif %}">
+              {{ rule.compliance_percentage }}%
+            </span>
+          </div>
+        </div>
+        <label class="relative inline-flex items-center cursor-pointer">
+          <input type="checkbox" class="sr-only peer" 
+                 id="rule{{ rule.id }}" 
+                 {{ 'checked' if rule.active else '' }}
+                 onchange="toggleRule({{ rule.id }})">
+          <div class="w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+        </label>
+      </div>
+      
+      <div class="mb-4">
+        <p class="text-gray-600 dark:text-gray-300 text-sm mb-3">{{ rule.description }}</p>
+        
+        {% if rule.tags %}
+        <div class="mb-3">
+          {% for tag in rule.tags %}
+          <span class="inline-block px-2 py-1 bg-blue-100 text-blue-800 rounded text-xs mr-1 mb-1">{{ tag.strip() }}</span>
+          {% endfor %}
+        </div>
+        {% endif %}
+        
+        {% if rule.linked_strategy %}
+        <div class="mb-3">
+          <span class="text-sm text-gray-500">
+            <i class="fas fa-link mr-1"></i>{{ rule.linked_strategy }}
+          </span>
+        </div>
+        {% endif %}
+        
+        {% if rule.violations_count > 0 %}
+        <div class="bg-yellow-50 border border-yellow-200 rounded p-2 mb-3">
+          <span class="text-yellow-800 text-xs">
+            <i class="fas fa-exclamation-triangle mr-1"></i>{{ rule.violations_count }} violations
+          </span>
+        </div>
+        {% endif %}
+      </div>
+      
+      <div class="flex justify-between items-center pt-3 border-t border-gray-200">
+        <span class="text-xs text-gray-500">{{ rule.created_at }}</span>
+        <div class="flex space-x-2">
+          <button class="px-3 py-1 bg-blue-100 text-blue-600 rounded hover:bg-blue-200" onclick="editRule({{ rule.id }})">
+            <i class="fas fa-edit"></i>
+          </button>
+          <button class="px-3 py-1 bg-red-100 text-red-600 rounded hover:bg-red-200" onclick="deleteRule({{ rule.id }})">
+            <i class="fas fa-trash"></i>
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+  {% endfor %}
+</div>
+
+<!-- Add/Edit Rule Modal -->
+<div id="ruleModal" class="fixed inset-0 bg-black bg-opacity-50 hidden items-center justify-center z-50">
+  <div class="bg-white dark:bg-gray-800 rounded-lg shadow-lg max-w-2xl w-full p-6 max-h-screen overflow-y-auto">
+    <div class="flex justify-between items-center mb-4">
+      <h2 class="text-xl font-bold" id="ruleModalTitle">Add New Rule</h2>
+      <button type="button" class="text-gray-500 hover:text-gray-700" onclick="closeModal()">
+        <i class="fas fa-times"></i>
+      </button>
+    </div>
+    
+    <form id="ruleForm">
+      <div class="space-y-4">
+        <input type="hidden" id="ruleId" name="rule_id">
+        
+        <!-- Basic Fields -->
+        <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+          <div class="md:col-span-3">
+            <label class="block text-sm font-medium mb-1">Rule Title <span class="text-red-500">*</span></label>
+            <input type="text" class="w-full px-3 py-2 border rounded-md" id="ruleTitle" name="title" required maxlength="100">
+            <div class="text-red-500 text-sm mt-1 hidden" id="titleFeedback"></div>
+          </div>
+          <div>
+            <label class="block text-sm font-medium mb-1">Category</label>
+            <select class="w-full px-3 py-2 border rounded-md" id="ruleCategory" name="category">
+              {% for category in categories %}
+              <option value="{{ category }}">{{ category }}</option>
+              {% endfor %}
+            </select>
+          </div>
+        </div>
+        
+        <div>
+          <label class="block text-sm font-medium mb-1">Description</label>
+          <textarea class="w-full px-3 py-2 border rounded-md" id="ruleDescription" name="description" rows="3"></textarea>
+        </div>
+        
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div>
+            <label class="block text-sm font-medium mb-1">Tags (comma-separated)</label>
+            <input type="text" class="w-full px-3 py-2 border rounded-md" id="ruleTags" name="tags" placeholder="risk, stop-loss, discipline">
+          </div>
+          <div>
+            <label class="block text-sm font-medium mb-1">Priority</label>
+            <select class="w-full px-3 py-2 border rounded-md" id="rulePriority" name="priority">
+              <option value="low">Low</option>
+              <option value="medium" selected>Medium</option>
+              <option value="high">High</option>
+            </select>
+          </div>
+          <div class="flex items-end">
+            <label class="flex items-center">
+              <input type="checkbox" class="mr-2" id="ruleActive" name="active" checked>
+              <span class="text-sm">Active</span>
+            </label>
+          </div>
+        </div>
+          
+        <!-- Advanced Section -->
+        <div class="border border-gray-200 rounded-lg">
+          <button type="button" class="w-full px-4 py-2 text-left bg-gray-50 hover:bg-gray-100 rounded-t-lg" onclick="toggleAdvanced()">
+            <span class="font-medium">Advanced Options</span>
+            <i class="fas fa-chevron-down float-right mt-1" id="advancedIcon"></i>
+          </button>
+          <div id="advancedSection" class="hidden p-4 space-y-4">
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label class="block text-sm font-medium mb-1">Linked Strategy</label>
+                <select class="w-full px-3 py-2 border rounded-md" id="ruleStrategy" name="linked_strategy_id">
+                  <option value="">None</option>
+                  {% for strategy in strategies %}
+                  <option value="{{ strategy.id }}">{{ strategy.name }}</option>
+                  {% endfor %}
+                </select>
+              </div>
+              <div>
+                <label class="block text-sm font-medium mb-1">Violation Consequence</label>
+                <select class="w-full px-3 py-2 border rounded-md" id="ruleConsequence" name="violation_consequence">
+                  <option value="log">Log Only</option>
+                  <option value="warn">Warn</option>
+                  <option value="notify">Notify</option>
+                </select>
+              </div>
+            </div>
+            
+            <label class="flex items-center">
+              <input type="checkbox" class="mr-2" id="saveTemplate" name="save_template">
+              <span class="text-sm">Save as Template</span>
+            </label>
+          </div>
+        </div>
+          
+        <!-- Templates Quick Menu -->
+        <div>
+          <label class="block text-sm font-medium mb-2">Quick Templates</label>
+          <div class="flex flex-wrap gap-2" id="templateButtons">
+            <!-- Templates loaded via JS -->
+          </div>
+        </div>
+      </div>
+      
+      <div class="flex justify-end space-x-3 pt-4 border-t">
+        <button type="button" class="px-4 py-2 bg-gray-200 text-gray-700 rounded hover:bg-gray-300" onclick="closeModal()">Cancel</button>
+        <button type="submit" class="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700">Save Rule</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+<script>
+let currentRuleId = null;
+
+document.addEventListener('DOMContentLoaded', function() {
+  loadTemplates();
+  setupFilters();
+  setupFormValidation();
+  setupModal();
+});
+
+// Modal functions
+function openModal() {
+  document.getElementById('ruleModal').classList.remove('hidden');
+  document.getElementById('ruleModal').classList.add('flex');
+}
+
+function closeModal() {
+  document.getElementById('ruleModal').classList.add('hidden');
+  document.getElementById('ruleModal').classList.remove('flex');
+  currentRuleId = null;
+  document.getElementById('ruleForm').reset();
+  document.getElementById('ruleActive').checked = true;
+}
+
+function toggleAdvanced() {
+  const section = document.getElementById('advancedSection');
+  const icon = document.getElementById('advancedIcon');
+  
+  if (section.classList.contains('hidden')) {
+    section.classList.remove('hidden');
+    icon.classList.remove('fa-chevron-down');
+    icon.classList.add('fa-chevron-up');
+  } else {
+    section.classList.add('hidden');
+    icon.classList.remove('fa-chevron-up');
+    icon.classList.add('fa-chevron-down');
+  }
+}
+
+function setupModal() {
+  // Add click handler to Add Rule button
+  const addButton = document.querySelector('[data-bs-target="#ruleModal"]');
+  if (addButton) {
+    addButton.removeAttribute('data-bs-toggle');
+    addButton.removeAttribute('data-bs-target');
+    addButton.addEventListener('click', openModal);
+  }
+}
+
+// Load rule templates
+async function loadTemplates() {
+  try {
+    const response = await fetch('/calculatentrade_journal/api/rules/templates');
+    const data = await response.json();
+    const container = document.getElementById('templateButtons');
+    
+    data.templates.forEach(template => {
+      const btn = document.createElement('button');
+      btn.type = 'button';
+      btn.className = 'btn btn-outline-info btn-sm';
+      btn.textContent = template.title;
+      btn.onclick = () => fillTemplate(template);
+      container.appendChild(btn);
+    });
+  } catch (error) {
+    console.error('Error loading templates:', error);
+  }
+}
+
+// Fill form with template data
+function fillTemplate(template) {
+  document.getElementById('ruleTitle').value = template.title;
+  document.getElementById('ruleDescription').value = template.description;
+  document.getElementById('ruleCategory').value = template.category;
+  document.getElementById('ruleTags').value = template.tags;
+  document.getElementById('rulePriority').value = template.priority;
+}
+
+// Setup filters
+function setupFilters() {
+  ['categoryFilter', 'priorityFilter', 'activeFilter', 'tagFilter'].forEach(id => {
+    document.getElementById(id).addEventListener('change', filterRules);
+  });
+  document.getElementById('tagFilter').addEventListener('input', filterRules);
+}
+
+// Filter rules
+function filterRules() {
+  const category = document.getElementById('categoryFilter').value;
+  const priority = document.getElementById('priorityFilter').value;
+  const active = document.getElementById('activeFilter').value;
+  const tag = document.getElementById('tagFilter').value.toLowerCase();
+  
+  document.querySelectorAll('.rule-item').forEach(item => {
+    let show = true;
+    
+    if (category && item.dataset.category !== category) show = false;
+    if (priority && item.dataset.priority !== priority) show = false;
+    if (active && item.dataset.active !== active) show = false;
+    if (tag && !item.dataset.tags.toLowerCase().includes(tag)) show = false;
+    
+    item.style.display = show ? 'block' : 'none';
+  });
+}
+
+// Clear filters
+function clearFilters() {
+  document.getElementById('categoryFilter').value = '';
+  document.getElementById('priorityFilter').value = '';
+  document.getElementById('activeFilter').value = '';
+  document.getElementById('tagFilter').value = '';
+  filterRules();
+}
+
+// Setup form validation
+function setupFormValidation() {
+  const titleInput = document.getElementById('ruleTitle');
+  titleInput.addEventListener('blur', validateTitle);
+  
+  document.getElementById('ruleForm').addEventListener('submit', handleSubmit);
+}
+
+// Validate title
+async function validateTitle() {
+  const title = document.getElementById('ruleTitle').value.trim();
+  const titleInput = document.getElementById('ruleTitle');
+  const feedback = document.getElementById('titleFeedback');
+  
+  if (!title) {
+    updateValidation(titleInput, false, 'Title is required');
+    return false;
+  }
+  
+  if (title.length > 100) {
+    updateValidation(titleInput, false, 'Title must be under 100 characters');
+    return false;
+  }
+  
+  try {
+    const response = await fetch('/calculatentrade_journal/api/rules/validate', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ title, rule_id: currentRuleId })
+    });
+    const data = await response.json();
+    
+    if (!data.valid) {
+      updateValidation(titleInput, false, data.message);
+      return false;
+    }
+    
+    updateValidation(titleInput, true);
+    return true;
+  } catch (error) {
+    console.error('Validation error:', error);
+    return true; // Allow submission on validation error
+  }
+}
+
+// Handle form submission
+async function handleSubmit(e) {
+  e.preventDefault();
+  
+  if (!(await validateTitle())) return;
+  
+  const formData = new FormData(e.target);
+  const data = Object.fromEntries(formData);
+  data.active = document.getElementById('ruleActive').checked;
+  data.save_template = document.getElementById('saveTemplate').checked;
+  
+  try {
+    const url = currentRuleId 
+      ? `/calculatentrade_journal/api/rules/${currentRuleId}`
+      : '/calculatentrade_journal/api/rules';
+    const method = currentRuleId ? 'PUT' : 'POST';
+    
+    const response = await fetch(url, {
+      method,
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(data)
+    });
+    
+    const result = await response.json();
+    
+    if (result.success) {
+      closeModal();
+      location.reload();
+    } else {
+      alert('Error: ' + result.message);
+    }
+  } catch (error) {
+    alert('Error saving rule: ' + error.message);
+  }
+}
+
+// Edit rule
+async function editRule(ruleId) {
+  try {
+    const response = await fetch(`/calculatentrade_journal/api/rules/${ruleId}`);
+    const rule = await response.json();
+    
+    currentRuleId = ruleId;
+    document.getElementById('ruleModalTitle').textContent = 'Edit Rule';
+    document.getElementById('ruleId').value = ruleId;
+    document.getElementById('ruleTitle').value = rule.title;
+    document.getElementById('ruleDescription').value = rule.description || '';
+    document.getElementById('ruleCategory').value = rule.category;
+    document.getElementById('ruleTags').value = rule.tags || '';
+    document.getElementById('rulePriority').value = rule.priority;
+    document.getElementById('ruleActive').checked = rule.active;
+    document.getElementById('ruleStrategy').value = rule.linked_strategy_id || '';
+    document.getElementById('ruleConsequence').value = rule.violation_consequence;
+    document.getElementById('saveTemplate').checked = rule.save_template;
+    
+    openModal();
+  } catch (error) {
+    alert('Error loading rule: ' + error.message);
+  }
+}
+
+// Delete rule
+async function deleteRule(ruleId) {
+  if (!confirm('Are you sure you want to delete this rule?')) return;
+  
+  try {
+    const response = await fetch(`/calculatentrade_journal/api/rules/${ruleId}`, {
+      method: 'DELETE'
+    });
+    
+    if (response.ok) {
+      location.reload();
+    } else {
+      alert('Error deleting rule');
+    }
+  } catch (error) {
+    alert('Error: ' + error.message);
+  }
+}
+
+// Toggle rule active status
+async function toggleRule(ruleId) {
+  try {
+    const response = await fetch(`/calculatentrade_journal/api/rules/${ruleId}/toggle`, {
+      method: 'POST'
+    });
+    
+    const result = await response.json();
+    if (!result.success) {
+      // Revert checkbox if failed
+      document.getElementById(`rule${ruleId}`).checked = !document.getElementById(`rule${ruleId}`).checked;
+      alert('Error toggling rule status');
+    }
+  } catch (error) {
+    alert('Error: ' + error.message);
+  }
+}
+
+// Update validation styling
+function updateValidation(element, isValid, message = '') {
+  const feedback = document.getElementById('titleFeedback');
+  
+  if (isValid) {
+    element.classList.remove('border-red-500');
+    element.classList.add('border-green-500');
+    feedback.classList.add('hidden');
+  } else {
+    element.classList.remove('border-green-500');
+    element.classList.add('border-red-500');
+    feedback.textContent = message;
+    feedback.classList.remove('hidden');
+  }
+}
+</script>
+{% endblock %}
