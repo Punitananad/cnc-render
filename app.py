@@ -59,10 +59,16 @@ app.jinja_env.cache = {}
 # Session stability - use stable secret key from env
 app.secret_key = os.getenv('FLASK_SECRET', 'dev-secret-change-this')
 
-# Use SQLite for development
-# from urllib.parse import quote_plus
-# db_location = f'postgresql://{DB_USER}:{quote_plus(DB_PASSWORD)}@{DB_HOST}:{DB_PORT}/{DB_NAME}'
-db_location = 'sqlite:///calculatentrade.db'
+# Database configuration
+if os.getenv('DATABASE_URL'):
+    # Production: Use PostgreSQL from DATABASE_URL
+    db_location = os.getenv('DATABASE_URL')
+    if db_location.startswith('postgres://'):
+        db_location = db_location.replace('postgres://', 'postgresql://', 1)
+else:
+    # Development: Use SQLite
+    db_location = 'sqlite:///calculatentrade.db'
+
 app.config["SQLALCHEMY_DATABASE_URI"] = db_location
 
 
