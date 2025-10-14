@@ -115,20 +115,8 @@ def load_user(user_id):
     except Exception:
         return None
 
-# Now register blueprint AFTER login manager initialization
+# Register main blueprint first
 app.register_blueprint(calculatentrade_bp)
-
-# Register admin blueprint
-from admin_blueprint import admin_bp, init_admin_db
-app.register_blueprint(admin_bp, url_prefix='/admin')
-
-# Register employee dashboard blueprint
-from employee_dashboard_bp import employee_dashboard_bp, init_employee_dashboard_db
-app.register_blueprint(employee_dashboard_bp, url_prefix='/employee')
-
-# Register mentor blueprint
-from mentor import mentor_bp, init_mentor_db
-app.register_blueprint(mentor_bp, url_prefix='/mentor')
 
 # Database initialization will be handled by init_db.py in production
 # Only initialize in development
@@ -314,6 +302,16 @@ class UserSettings(db.Model):
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
     
     user = db.relationship('User', backref=db.backref('settings', uselist=False))
+
+# Register blueprints after User model is defined
+from admin_blueprint import admin_bp, init_admin_db
+app.register_blueprint(admin_bp, url_prefix='/admin')
+
+from employee_dashboard_bp import employee_dashboard_bp, init_employee_dashboard_db
+app.register_blueprint(employee_dashboard_bp, url_prefix='/employee')
+
+from mentor import mentor_bp, init_mentor_db
+app.register_blueprint(mentor_bp, url_prefix='/mentor')
 
 
 # Base Trade Model for all calculator types
