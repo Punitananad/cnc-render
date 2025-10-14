@@ -20,7 +20,6 @@ itsdangerous
 Jinja2
 MarkupSafe
 WTForms
-beautifulsoup4
-lxml
+
 pandas>=2.1.0
 numpy>=1.24.0
