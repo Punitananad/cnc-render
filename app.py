@@ -130,32 +130,33 @@ app.register_blueprint(employee_dashboard_bp, url_prefix='/employee')
 from mentor import mentor_bp, init_mentor_db
 app.register_blueprint(mentor_bp, url_prefix='/mentor')
 
-# Initialize blueprint databases immediately after registration
-with app.app_context():
-    # First create main database tables
-    try:
-        db.create_all()
-        print("Main database tables created successfully")
-    except Exception as e:
-        print(f"Error creating main database tables: {e}")
-    
-    try:
-        init_admin_db(db)
-        print("Admin blueprint database initialized")
-    except Exception as e:
-        print(f"Error initializing admin blueprint: {e}")
-    
-    try:
-        init_employee_dashboard_db(db)
-        print("Employee dashboard blueprint database initialized")
-    except Exception as e:
-        print(f"Error initializing employee dashboard blueprint: {e}")
-    
-    try:
-        init_mentor_db(db)
-        print("Mentor blueprint database initialized")
-    except Exception as e:
-        print(f"Error creating mentor models: {e}")
+# Database initialization will be handled by init_db.py in production
+# Only initialize in development
+if not os.getenv('DATABASE_URL'):
+    with app.app_context():
+        try:
+            db.create_all()
+            print("Development database tables created successfully")
+        except Exception as e:
+            print(f"Error creating development database tables: {e}")
+        
+        try:
+            init_admin_db(db)
+            print("Admin blueprint database initialized")
+        except Exception as e:
+            print(f"Error initializing admin blueprint: {e}")
+        
+        try:
+            init_employee_dashboard_db(db)
+            print("Employee dashboard blueprint database initialized")
+        except Exception as e:
+            print(f"Error initializing employee dashboard blueprint: {e}")
+        
+        try:
+            init_mentor_db(db)
+            print("Mentor blueprint database initialized")
+        except Exception as e:
+            print(f"Error creating mentor models: {e}")
     
 
 
