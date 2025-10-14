@@ -18,7 +18,7 @@ from flask_login import LoginManager, login_user, logout_user, current_user, log
 
 
 import requests
-import pandas as pd
+# import pandas as pd  # Removed for deployment compatibility
 from flask_mail import Mail, Message
 from dotenv import load_dotenv
 from authlib.integrations.flask_client import OAuth
@@ -1747,10 +1747,10 @@ def api_pivots_last_internal(sec_id):
     base = last_completed_trading_day()
     prev_day = _previous_trading_day(base)
     try:
-        df = fetch_intraday_ohlc(sec_id, prev_day)
-        H = float(df["high"].max())
-        L = float(df["low"].min())
-        C = float(df.iloc[-1]["close"])
+        data_result = fetch_intraday_ohlc(sec_id, prev_day)
+        H = data_result["high"]
+        L = data_result["low"]
+        C = data_result["close"]
         levels = fibonacci_pivots(H, L, C)
         return {
             "ok": True,
@@ -1905,8 +1905,8 @@ def api_single_day():
 
     day = last_completed_trading_day()
     try:
-        df = fetch_intraday_ohlc(sec_id, day)
-        data = df.sort_values("time").to_dict(orient="records")
+        data_result = fetch_intraday_ohlc(sec_id, day)
+        data = data_result["data"]
         return jsonify({
             "ok": True,
             "date": day.strftime("%Y-%m-%d"),
@@ -2052,7 +2052,7 @@ def stock_analysis():
                            market_depth=market_depth)
 
 # ================== PIVOT POINTS (LAST TRADING DAY, DHAN API) ==================
-import pandas as pd
+# import pandas as pd  # Removed for deployment compatibility
 from datetime import date as _date, time as _time, datetime as _dt, timedelta as _td
 
 # NSE timings
@@ -2158,30 +2158,35 @@ def fetch_intraday_ohlc(sec_id: str, day: _date):
             app.logger.warning(f"[INTRADAY] Response error: {last_err}")
         else:
             js = r.json()
-            df = pd.DataFrame(js.get("data", js))
+            data = js.get("data", js)
 
-            if not df.empty:
-                # Normalize numeric columns
-                for c in ("open", "high", "low", "close"):
-                    if c in df.columns:
-                        df[c] = pd.to_numeric(df[c], errors="coerce")
+            if data:
+                # Process data without pandas
+                processed_data = []
+                for row in data:
+                    try:
+                        # Convert numeric fields
+                        for field in ["open", "high", "low", "close"]:
+                            if field in row and row[field] is not None:
+                                row[field] = float(row[field])
+                        
+                        # Only include rows with valid OHLC data
+                        if all(field in row and row[field] is not None for field in ["open", "high", "low", "close"]):
+                            processed_data.append(row)
+                    except (ValueError, TypeError):
+                        continue
 
-                # Timestamps
-                if "timestamp" in df.columns:
-                    df["time"] = pd.to_datetime(df["timestamp"], unit="s", utc=True).dt.tz_convert(IST)
-                elif "start_Time" in df.columns:
-                    # कुछ responses string datetime देते हैं
-                    df["time"] = pd.to_datetime(df["start_Time"]).dt.tz_localize(IST)
-
-                df = df.dropna(subset=["open", "high", "low", "close"])
-
-                if not df.empty:
-                    H = float(df["high"].max()); L = float(df["low"].min()); C = float(df.iloc[-1]["close"])
+                if processed_data:
+                    # Calculate H, L, C without pandas
+                    H = max(row["high"] for row in processed_data)
+                    L = min(row["low"] for row in processed_data)
+                    C = processed_data[-1]["close"]
                     app.logger.debug(f"[INTRADAY] OHLC sec_id={sec_id} date={day}: H={H}, L={L}, C={C}")
                     # Zero-range check (illiquid / holiday glitch)
                     if H == L == C:
                         app.logger.warning(f"[INTRADAY] Zero-range OHLC for sec_id={sec_id} on {day}")
-                    return df
+                    # Return data in dict format instead of DataFrame
+                    return {"data": processed_data, "high": H, "low": L, "close": C}
             else:
                 app.logger.warning(f"[INTRADAY] Empty intraday for sec_id={sec_id} on {day}")
     except Exception as e:
@@ -2204,16 +2209,32 @@ def fetch_intraday_ohlc(sec_id: str, day: _date):
         if r.status_code != 200:
             raise RuntimeError(f"HTTP {r.status_code}: {r.text}")
         js = r.json()
-        df = pd.DataFrame(js.get("data", js))
-        if df.empty:
+        data = js.get("data", js)
+        if not data:
             raise RuntimeError("Daily data empty")
 
-        for c in ("open", "high", "low", "close"):
-            if c in df.columns:
-                df[c] = pd.to_numeric(df[c], errors="coerce")
-        df["time"] = pd.to_datetime(day).tz_localize(IST)
+        # Process daily data without pandas
+        processed_data = []
+        for row in data:
+            try:
+                for field in ["open", "high", "low", "close"]:
+                    if field in row and row[field] is not None:
+                        row[field] = float(row[field])
+                if all(field in row for field in ["open", "high", "low", "close"]):
+                    processed_data.append(row)
+            except (ValueError, TypeError):
+                continue
+        
+        if not processed_data:
+            raise RuntimeError("No valid daily data")
+        
+        # Calculate OHLC values
+        H = max(row["high"] for row in processed_data)
+        L = min(row["low"] for row in processed_data)
+        C = processed_data[-1]["close"]
+        
         app.logger.debug(f"[DAILY] Fallback OHLC sec_id={sec_id} date={day}")
-        return df
+        return {"data": processed_data, "high": H, "low": L, "close": C}
     except Exception as e:
         raise RuntimeError(f"Fetch failed: {last_err or e}")
 
