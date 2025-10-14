@@ -10,32 +10,29 @@ from datetime import datetime, timedelta
 from functools import wraps
 from typing import Optional, Tuple
 from difflib import get_close_matches
-from journal import calculatentrade_bp
-from journal import db
-# app.py
-from flask_login import LoginManager, login_user, logout_user, current_user, login_required,UserMixin
-# ... other imports
-
-
-import requests
-# import pandas as pd  # Removed for deployment compatibility
-from flask_mail import Mail, Message
-from dotenv import load_dotenv
-from authlib.integrations.flask_client import OAuth
-from google_auth_oauthlib.flow import Flow
-import json
-
-load_dotenv()
-
 from flask import Flask, render_template, request, redirect, url_for, session, flash, jsonify, send_from_directory
-
 from flask_sqlalchemy import SQLAlchemy
 from flask_migrate import Migrate
+from flask_login import LoginManager, login_user, logout_user, current_user, login_required, UserMixin
+from flask_mail import Mail, Message
 from werkzeug.security import generate_password_hash, check_password_hash
 from werkzeug.middleware.proxy_fix import ProxyFix
-import sqlite3  # Keep for Dhan symbol lookup only
+from authlib.integrations.flask_client import OAuth
+from google_auth_oauthlib.flow import Flow
+from dotenv import load_dotenv
+import requests
+import json
+import sqlite3
 import pytz
 from datetime import datetime, timedelta
+
+# Import blueprints at top
+from journal import calculatentrade_bp, db
+from admin_blueprint import admin_bp, init_admin_db
+from employee_dashboard_bp import employee_dashboard_bp, init_employee_dashboard_db
+from mentor import mentor_bp, init_mentor_db
+
+load_dotenv()
 
 # ------------------------------------------------------------------------------
 # App & DB setup
@@ -115,8 +112,7 @@ def load_user(user_id):
     except Exception:
         return None
 
-# Register main blueprint first
-app.register_blueprint(calculatentrade_bp)
+# Blueprint registration will be done after models are defined
 
 # Database initialization will be handled by init_db.py in production
 # Only initialize in development
@@ -302,16 +298,6 @@ class UserSettings(db.Model):
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
     
     user = db.relationship('User', backref=db.backref('settings', uselist=False))
-
-# Register blueprints after User model is defined
-from admin_blueprint import admin_bp, init_admin_db
-app.register_blueprint(admin_bp, url_prefix='/admin')
-
-from employee_dashboard_bp import employee_dashboard_bp, init_employee_dashboard_db
-app.register_blueprint(employee_dashboard_bp, url_prefix='/employee')
-
-from mentor import mentor_bp, init_mentor_db
-app.register_blueprint(mentor_bp, url_prefix='/mentor')
 
 
 # Base Trade Model for all calculator types
@@ -3863,6 +3849,14 @@ def reopen_fno_position():
 @app.route("/favicon.ico")
 def favicon():
     return send_from_directory(".", "favicon.ico", mimetype="image/vnd.microsoft.icon")
+
+# ------------------------------------------------------------------------------
+# Register Blueprints (after all models are defined)
+# ------------------------------------------------------------------------------
+app.register_blueprint(calculatentrade_bp)
+app.register_blueprint(admin_bp, url_prefix='/admin')
+app.register_blueprint(employee_dashboard_bp, url_prefix='/employee')
+app.register_blueprint(mentor_bp, url_prefix='/mentor')
 
 # ------------------------------------------------------------------------------
 # Main
