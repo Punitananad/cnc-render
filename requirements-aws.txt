@@ -22,5 +22,5 @@ MarkupSafe
 WTForms
 beautifulsoup4
 lxml
-pandas==2.0.3
-numpy
+pandas>=2.1.0
+numpy>=1.24.0
