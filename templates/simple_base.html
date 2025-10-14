@@ -183,11 +183,25 @@
     <footer class="footer">
         <div class="container">
             <div class="row">
-                <div class="col-md-6">
-                    <p class="mb-0">&copy; 2023 Calculate N Trade. All rights reserved.</p>
+                <div class="col-md-4">
+                    <h6>Calculate N Trade</h6>
+                    <p class="mb-0 small">Professional trading tools for risk management and analysis.</p>
                 </div>
-                <div class="col-md-6 text-end">
-                    <small class="text-muted">Risk Disclosure: Trading involves significant risk of loss.</small>
+                <div class="col-md-4">
+                    <h6>Quick Links</h6>
+                    <ul class="list-unstyled small">
+                        <li><a href="{{ url_for('home') }}" class="text-light text-decoration-none">Home</a></li>
+                        <li><a href="{{ url_for('subscription') }}" class="text-light text-decoration-none">Pricing</a></li>
+                        <li><a href="{{ url_for('terms') }}" class="text-light text-decoration-none">Terms & Conditions</a></li>
+                        <li><a href="{{ url_for('privacy_policy') }}" class="text-light text-decoration-none">Privacy Policy</a></li>
+                        <li><a href="{{ url_for('refund_policy') }}" class="text-light text-decoration-none">Refund Policy</a></li>
+                    </ul>
+                </div>
+                <div class="col-md-4">
+                    <h6>Legal</h6>
+                    <p class="mb-0 small text-muted">&copy; 2025 Calculate N Trade. All rights reserved.</p>
+                    <p class="mb-0 small text-muted"><strong>Software Service Only:</strong> We provide calculation tools, not trading services.</p>
+                    <p class="mb-0 small text-muted">Risk Disclosure: Trading involves significant risk of loss.</p>
                 </div>
             </div>
         </div>
@@ -198,4 +212,4 @@
     
     {% block extra_js %}{% endblock %}
 </body>
-</html>
+</html>Kamjor. 

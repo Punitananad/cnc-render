@@ -55,14 +55,20 @@
                 {% if session.admin_role == 'owner' %}
                 <li><a><i class="fa fa-users"></i> Users <span class="fa fa-chevron-down"></span></a>
                   <ul class="nav child_menu">
-                    <li><a href="{{ url_for('admin.create_user') }}">Create Admin User</a></li>
-                    <li><a href="{{ url_for('admin.admin_manage_users') }}">Manage Users</a></li>
+                    <li><a href="{{ url_for('admin.dashboard') }}">Manage Users</a></li>
                   </ul>
                 </li>
                 <li><a><i class="fa fa-user-tie"></i> Employees <span class="fa fa-chevron-down"></span></a>
                   <ul class="nav child_menu">
                     <li><a href="{{ url_for('admin.admin_create_employee') }}">Create Employee</a></li>
-                    <li><a href="{{ url_for('admin.admin_manage_employees') }}">Manage Employees</a></li>
+                    <li><a href="{{ url_for('admin.employees') }}">Manage Employees</a></li>
+                  </ul>
+                </li>
+                <li><a><i class="fa fa-chalkboard-teacher"></i> Mentors <span class="fa fa-chevron-down"></span></a>
+                  <ul class="nav child_menu">
+                    <li><a href="{{ url_for('admin.create_mentor') }}">Create Mentor</a></li>
+                    <li><a href="{{ url_for('admin.mentors') }}">Manage Mentors</a></li>
+                    <li><a href="{{ url_for('admin.assign_coupon_to_mentor') }}">Assign Coupons</a></li>
                   </ul>
                 </li>
                 {% endif %}

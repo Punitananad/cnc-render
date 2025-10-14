@@ -32,9 +32,9 @@
             <div class="animated flipInY col-lg-3 col-md-6 col-sm-6">
               <div class="tile-stats">
                 <div class="icon"><i class="fa fa-users"></i></div>
-                <div class="count">{{ admin_count }}</div>
-                <h3>Admin Users</h3>
-                <p>Total administrators in the system</p>
+                <div class="count">{{ user_count|default(0) }}</div>
+                <h3>Users</h3>
+                <p>Total CalculatenTrade users</p>
               </div>
             </div>
             <div class="animated flipInY col-lg-3 col-md-6 col-sm-6">
@@ -47,10 +47,10 @@
             </div>
             <div class="animated flipInY col-lg-3 col-md-6 col-sm-6">
               <div class="tile-stats">
-                <div class="icon"><i class="fa fa-user"></i></div>
-                <div class="count">{{ user_count|default(0) }}</div>
-                <h3>Users</h3>
-                <p>Total registered users</p>
+                <div class="icon"><i class="fa fa-chalkboard-teacher"></i></div>
+                <div class="count">{{ mentor_count|default(0) }}</div>
+                <h3>Mentors</h3>
+                <p>Total mentors registered</p>
               </div>
             </div>
           </div>
@@ -93,7 +93,7 @@
                       {{ 'Active' if coupon.active else 'Inactive' }}
                     </span>
                   </td>
-                  <td>{{ coupon.created_at.strftime('%Y-%m-%d') }}</td>
+                  <td>{{ coupon.created_at[:10] if coupon.created_at else 'N/A' }}</td>
                 </tr>
                 {% endfor %}
               </tbody>
@@ -114,19 +114,34 @@
         </div>
         <div class="x_content">
           <div class="row">
-            <div class="col-md-4">
+            <div class="col-md-3">
               <a href="{{ url_for('admin.create_user') }}" class="btn btn-primary btn-block mb-3">
                 <i class="fa fa-user-plus me-2"></i> Create Admin User
               </a>
             </div>
-            <div class="col-md-4">
-              <a href="{{ url_for('admin.admin_create_employee') }}" class="btn btn-info btn-block mb-3">
+            <div class="col-md-3">
+              <a href="{{ url_for('admin.admin_create_employee') }}" class="btn btn-success btn-block mb-3">
                 <i class="fa fa-user-tie me-2"></i> Create Employee
               </a>
             </div>
-            <div class="col-md-4">
-              <a href="{{ url_for('admin.owner_password') }}" class="btn btn-dark btn-block mb-3">
-                <i class="fa fa-key me-2"></i> Owner Settings
+            <div class="col-md-3">
+              <a href="{{ url_for('admin.employees') }}" class="btn btn-info btn-block mb-3">
+                <i class="fa fa-users me-2"></i> View All Employees
+              </a>
+            </div>
+            <div class="col-md-3">
+              <a href="{{ url_for('admin.create_mentor') }}" class="btn btn-warning btn-block mb-3">
+                <i class="fa fa-chalkboard-teacher me-2"></i> Create Mentor
+              </a>
+            </div>
+            <div class="col-md-3">
+              <a href="{{ url_for('admin.users') }}" class="btn btn-primary btn-block mb-3">
+                <i class="fa fa-users me-2"></i> Manage Users
+              </a>
+            </div>
+            <div class="col-md-3">
+              <a href="{{ url_for('admin.mentors') }}" class="btn btn-info btn-block mb-3">
+                <i class="fa fa-chalkboard-teacher me-2"></i> Manage Mentors
               </a>
             </div>
           </div>

@@ -29,7 +29,7 @@
       <div class="col-md-3 left_col">
         <div class="left_col scroll-view">
           <div class="navbar nav_title" style="border: 0;">
-            <a href="{{ url_for('employee.employee_dashboard') }}" class="site_title"><i class="fa fa-calculator"></i> <span>CalculatenTrade</span></a>
+            <a href="{{ url_for('employee_dashboard.dashboard') }}" class="site_title"><i class="fa fa-calculator"></i> <span>CalculatenTrade</span></a>
           </div>
 
           <div class="clearfix"></div>
@@ -53,10 +53,10 @@
             <div class="menu_section">
               <h3>General</h3>
               <ul class="nav side-menu">
-                <li><a href="{{ url_for('employee.employee_dashboard') }}"><i class="fa fa-home"></i> Dashboard</a></li>
-                <li><a href="{{ url_for('employee.employee_manage_users') }}"><i class="fa fa-users"></i> Manage Users</a></li>
-                <li><a href="{{ url_for('employee.employee_reports') }}"><i class="fa fa-bar-chart"></i> Reports</a></li>
-                <li><a href="{{ url_for('employee.employee_settings') }}"><i class="fa fa-cog"></i> Settings</a></li>
+                <li><a href="{{ url_for('employee_dashboard.dashboard') }}"><i class="fa fa-home"></i> Dashboard</a></li>
+                <li><a href="{{ url_for('employee_dashboard.users_list') }}"><i class="fa fa-users"></i> Manage Users</a></li>
+                <li><a href="#"><i class="fa fa-bar-chart"></i> Reports</a></li>
+                <li><a href="#"><i class="fa fa-cog"></i> Settings</a></li>
               </ul>
             </div>
           </div>
@@ -77,8 +77,8 @@
                   <img src="{{ url_for('static', filename='images/user.png') }}" alt="">{{ session.employee_username }}
                 </a>
                 <div class="dropdown-menu dropdown-usermenu pull-right" aria-labelledby="navbarDropdown">
-                  <a class="dropdown-item" href="{{ url_for('employee.employee_settings') }}"> Profile</a>
-                  <a class="dropdown-item" href="{{ url_for('employee.employee_logout') }}"><i class="fa fa-sign-out pull-right"></i> Log Out</a>
+                  <a class="dropdown-item" href="#"> Profile</a>
+                  <a class="dropdown-item" href="{{ url_for('employee_dashboard.employee_logout') }}"><i class="fa fa-sign-out pull-right"></i> Log Out</a>
                 </div>
               </li>
             </ul>

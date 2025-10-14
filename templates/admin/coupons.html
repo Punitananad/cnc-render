@@ -72,7 +72,7 @@
                     </span>
                 </td>
                 <td>{{ coupon.created_by }}</td>
-                <td>{{ coupon.created_at.strftime('%Y-%m-%d %H:%M') }}</td>
+                <td>{{ coupon.created_at[:16] if coupon.created_at else 'N/A' }}</td>
                 <td>
                     <form method="POST" action="{{ url_for('admin.toggle_coupon', coupon_id=coupon.id) }}" style="display: inline;">
                         <button type="submit" class="toggle-btn {{ 'deactivate' if coupon.active else 'activate' }}">

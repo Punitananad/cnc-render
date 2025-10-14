@@ -39,10 +39,10 @@
                         </div>
                         <div class="animated flipInY col-lg-3 col-md-6 col-sm-6">
                             <div class="tile-stats">
-                                <div class="icon"><i class="fa fa-clock-o"></i></div>
-                                <div class="count">{{ active_sessions }}</div>
-                                <h3>Active Sessions</h3>
-                                <p>Current user sessions</p>
+                                <div class="icon"><i class="fa fa-times-circle"></i></div>
+                                <div class="count">{{ inactive_users }}</div>
+                                <h3>Inactive Users</h3>
+                                <p>Users with unverified accounts</p>
                             </div>
                         </div>
                         <div class="animated flipInY col-lg-3 col-md-6 col-sm-6">
@@ -71,26 +71,35 @@
                         <table class="table table-striped jambo_table">
                             <thead>
                                 <tr>
-                                    <th>Timestamp</th>
-                                    <th>Action</th>
-                                    <th>User</th>
-                                    <th>Details</th>
+                                    <th>Email</th>
+                                    <th>Status</th>
+                                    <th>Registered</th>
+                                    <th>Actions</th>
                                 </tr>
                             </thead>
                             <tbody>
-                                {% for audit in recent_audits %}
+                                {% for user in recent_users %}
                                 <tr>
-                                    <td>{{ audit.timestamp.strftime('%Y-%m-%d %H:%M') }}</td>
-                                    <td>{{ audit.action }}</td>
-                                    <td>{{ audit.user_id }}</td>
-                                    <td>{{ audit.details }}</td>
+                                    <td>{{ user.email }}</td>
+                                    <td>
+                                        <span class="badge {{ 'bg-success' if user.verified else 'bg-warning' }}">
+                                            {{ 'Active' if user.verified else 'Inactive' }}
+                                        </span>
+                                    </td>
+                                    <td>{{ user.registered_on[:10] if user.registered_on else 'N/A' }}</td>
+                                    <td>
+                                        <button class="btn btn-sm {{ 'btn-warning' if user.verified else 'btn-success' }}" 
+                                                onclick="toggleUser({{ user.id }}, {{ user.verified|lower }})">
+                                            {{ 'Deactivate' if user.verified else 'Activate' }}
+                                        </button>
+                                    </td>
                                 </tr>
                                 {% endfor %}
                             </tbody>
                         </table>
                     </div>
                     <div class="text-center mt-3">
-                        <a href="{{ url_for('employee_dashboard.manage_users') }}" class="btn btn-primary">Manage All Users</a>
+                        <a href="{{ url_for('employee_dashboard.users_list') }}" class="btn btn-primary">Manage All Users</a>
                     </div>
                 </div>
             </div>
@@ -107,17 +116,17 @@
                 <div class="x_content">
                     <div class="row">
                         <div class="col-md-4">
-                            <a href="{{ url_for('employee_dashboard.manage_users') }}" class="btn btn-primary btn-block mb-3">
+                            <a href="{{ url_for('employee_dashboard.users_list') }}" class="btn btn-primary btn-block mb-3">
                                 <i class="fa fa-users me-2"></i> Manage Users
                             </a>
                         </div>
                         <div class="col-md-4">
-                            <a href="{{ url_for('employee_dashboard.employee_reports') }}" class="btn btn-info btn-block mb-3">
+                            <a href="#" class="btn btn-info btn-block mb-3">
                                 <i class="fa fa-bar-chart me-2"></i> View Reports
                             </a>
                         </div>
                         <div class="col-md-4">
-                            <a href="{{ url_for('employee_dashboard.employee_settings') }}" class="btn btn-dark btn-block mb-3">
+                            <a href="#" class="btn btn-dark btn-block mb-3">
                                 <i class="fa fa-cog me-2"></i> Settings
                             </a>
                         </div>
@@ -127,114 +136,29 @@
         </div>
     </div>
 </div>
+
+<script>
+function toggleUser(userId, currentStatus) {
+    if (confirm('Are you sure you want to ' + (currentStatus ? 'deactivate' : 'activate') + ' this user?')) {
+        fetch('/employee/api/user/' + userId + '/toggle', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                alert(data.message);
+                location.reload();
+            } else {
+                alert('Error: ' + data.error);
+            }
+        })
+        .catch(error => {
+            alert('Error: ' + error);
+        });
+    }
+}
+</script>
 {% endblock %}
-                            <dl>
-                                <dt class="text-sm font-medium text-gray-500 truncate">Total Users</dt>
-                                <dd class="text-lg font-medium text-gray-900">{{ total_users }}</dd>
-                            </dl>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <div class="bg-white overflow-hidden shadow rounded-lg">
-                <div class="p-5">
-                    <div class="flex items-center">
-                        <div class="flex-shrink-0">
-                            <div class="w-8 h-8 bg-green-500 rounded-full flex items-center justify-center">
-                                <span class="text-white text-sm font-medium">A</span>
-                            </div>
-                        </div>
-                        <div class="ml-5 w-0 flex-1">
-                            <dl>
-                                <dt class="text-sm font-medium text-gray-500 truncate">Active Users</dt>
-                                <dd class="text-lg font-medium text-gray-900">{{ active_users }}</dd>
-                            </dl>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <div class="bg-white overflow-hidden shadow rounded-lg">
-                <div class="p-5">
-                    <div class="flex items-center">
-                        <div class="flex-shrink-0">
-                            <div class="w-8 h-8 bg-yellow-500 rounded-full flex items-center justify-center">
-                                <span class="text-white text-sm font-medium">S</span>
-                            </div>
-                        </div>
-                        <div class="ml-5 w-0 flex-1">
-                            <dl>
-                                <dt class="text-sm font-medium text-gray-500 truncate">Active Sessions</dt>
-                                <dd class="text-lg font-medium text-gray-900">{{ active_sessions }}</dd>
-                            </dl>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <div class="bg-white overflow-hidden shadow rounded-lg">
-                <div class="p-5">
-                    <div class="flex items-center">
-                        <div class="flex-shrink-0">
-                            <div class="w-8 h-8 bg-purple-500 rounded-full flex items-center justify-center">
-                                <span class="text-white text-sm font-medium">L</span>
-                            </div>
-                        </div>
-                        <div class="ml-5 w-0 flex-1">
-                            <dl>
-                                <dt class="text-sm font-medium text-gray-500 truncate">Recent Actions</dt>
-                                <dd class="text-lg font-medium text-gray-900">{{ recent_audits|length }}</dd>
-                            </dl>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <!-- Quick Actions -->
-        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
-            <div class="lg:col-span-2">
-                <div class="bg-white shadow rounded-lg">
-                    <div class="px-4 py-5 sm:p-6">
-                        <h3 class="text-lg leading-6 font-medium text-gray-900 mb-4">Quick Actions</h3>
-                        <div class="grid grid-cols-2 gap-4">
-                            <a href="{{ url_for('employee_dashboard.users_list') }}" 
-                               class="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700">
-                                Manage Users
-                            </a>
-                            <a href="{{ url_for('employee_dashboard.active_sessions') }}" 
-                               class="inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50">
-                                View Sessions
-                            </a>
-                            {% if session.employee_role in ['admin', 'owner'] %}
-                            <a href="{{ url_for('employee_dashboard.audit_log') }}" 
-                               class="inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50">
-                                Audit Log
-                            </a>
-                            {% endif %}
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <div class="bg-white shadow rounded-lg">
-                <div class="px-4 py-5 sm:p-6">
-                    <h3 class="text-lg leading-6 font-medium text-gray-900 mb-4">Recent Activity</h3>
-                    <div class="space-y-3">
-                        {% for audit in recent_audits[:5] %}
-                        <div class="flex items-center text-sm">
-                            <div class="flex-shrink-0 w-2 h-2 bg-blue-400 rounded-full"></div>
-                            <div class="ml-3 flex-1">
-                                <p class="text-gray-900">{{ audit.action.replace('_', ' ').title() }}</p>
-                                <p class="text-gray-500">{{ audit.timestamp.strftime('%H:%M') }}</p>
-                            </div>
-                        </div>
-                        {% endfor %}
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-</body>
-</html>

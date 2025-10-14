@@ -74,7 +74,7 @@
                             {{ 'Active' if user.verified else 'Inactive' }}
                         </span>
                     </td>
-                    <td>{{ user.registered_on.strftime('%Y-%m-%d') if user.registered_on else 'N/A' }}</td>
+                    <td>{{ user.registered_on[:10] if user.registered_on else 'N/A' }}</td>
                     <td>
                         <a href="{{ url_for('employee.manage_users') }}" class="employee-btn">Manage</a>
                     </td>

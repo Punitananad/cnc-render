@@ -38,8 +38,11 @@ except ImportError:
 
 # Angel One SmartAPI SDK
 try:
-    from SmartApi import SmartConnect
+    from smartapi_wrapper import SmartConnect
 except ImportError:
+    SmartConnect = None
+except Exception as e:
+    print(f"Warning: SmartApi import failed: {e}")
     SmartConnect = None
 
 # Load environment variables

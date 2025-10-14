@@ -1,0 +1,85 @@
+{% extends "admin/admin_base.html" %}
+
+{% block title %}Manage Mentors - Admin Panel{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-12">
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <h2><i class="fas fa-chalkboard-teacher me-2"></i>Manage Mentors</h2>
+            <a href="{{ url_for('admin.create_mentor') }}" class="btn btn-primary">
+                <i class="fas fa-plus me-2"></i>Create Mentor
+            </a>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-body">
+                {% if mentors %}
+                    <div class="table-responsive">
+                        <table class="table table-striped">
+                            <thead>
+                                <tr>
+                                    <th>Mentor ID</th>
+                                    <th>Name</th>
+                                    <th>Email</th>
+                                    <th>Status</th>
+                                    <th>Created</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for mentor in mentors %}
+                                <tr>
+                                    <td><code>{{ mentor.mentor_id }}</code></td>
+                                    <td>{{ mentor.name }}</td>
+                                    <td>{{ mentor.email }}</td>
+                                    <td>
+                                        {% if mentor.active %}
+                                            <span class="badge bg-success">Active</span>
+                                        {% else %}
+                                            <span class="badge bg-danger">Inactive</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>{{ mentor.created_at.strftime('%Y-%m-%d') }}</td>
+                                    <td>
+                                        <form method="POST" class="d-inline" action="{{ url_for('admin.reset_mentor_password', mentor_id=mentor.id) }}">
+                                            <button type="submit" class="btn btn-sm btn-warning" 
+                                                    onclick="return confirm('Reset password for {{ mentor.name }}?')">
+                                                <i class="fas fa-key"></i> Reset Password
+                                            </button>
+                                        </form>
+                                        
+                                        <form method="POST" class="d-inline" action="{{ url_for('admin.toggle_mentor', mentor_id=mentor.id) }}">
+                                            <button type="submit" class="btn btn-sm {{ 'btn-danger' if mentor.active else 'btn-success' }}">
+                                                {% if mentor.active %}
+                                                    <i class="fas fa-ban"></i> Deactivate
+                                                {% else %}
+                                                    <i class="fas fa-check"></i> Activate
+                                                {% endif %}
+                                            </button>
+                                        </form>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                {% else %}
+                    <div class="text-center py-4">
+                        <i class="fas fa-chalkboard-teacher fa-3x text-muted mb-3"></i>
+                        <h5>No mentors found</h5>
+                        <p class="text-muted">Create your first mentor to get started.</p>
+                        <a href="{{ url_for('admin.create_mentor') }}" class="btn btn-primary">
+                            <i class="fas fa-plus me-2"></i>Create Mentor
+                        </a>
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

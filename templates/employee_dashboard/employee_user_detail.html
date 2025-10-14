@@ -1,121 +1,185 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>User Details - Employee Dashboard</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-</head>
-<body class="bg-gray-50">
-    <!-- Navigation -->
-    <nav class="bg-white shadow-sm border-b">
-        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <div class="flex justify-between h-16">
-                <div class="flex items-center space-x-4">
-                    <a href="{{ url_for('employee_dashboard.users_list') }}" class="text-indigo-600 hover:text-indigo-800">← Back to Users</a>
-                    <h1 class="text-xl font-semibold text-gray-900">User Details</h1>
-                </div>
-                <div class="flex items-center space-x-4">
-                    <span class="text-sm text-gray-700">{{ session.employee_name }}</span>
-                    <a href="{{ url_for('employee_dashboard.employee_logout') }}" class="text-sm text-red-600 hover:text-red-800">Logout</a>
-                </div>
-            </div>
-        </div>
-    </nav>
+{% extends "employee_dashboard/employee_base.html" %}
 
-    <div class="max-w-4xl mx-auto py-6 sm:px-6 lg:px-8">
-        {% if user %}
-        <!-- User Profile -->
-        <div class="bg-white shadow overflow-hidden sm:rounded-lg mb-6">
-            <div class="px-4 py-5 sm:px-6">
-                <h3 class="text-lg leading-6 font-medium text-gray-900">User Profile</h3>
-                <p class="mt-1 max-w-2xl text-sm text-gray-500">Personal details and account information.</p>
-            </div>
-            <div class="border-t border-gray-200">
-                <dl>
-                    <div class="bg-gray-50 px-4 py-5 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-6">
-                        <dt class="text-sm font-medium text-gray-500">Email address</dt>
-                        <dd class="mt-1 text-sm text-gray-900 sm:mt-0 sm:col-span-2">{{ user.email }}</dd>
-                    </div>
-                    <div class="bg-white px-4 py-5 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-6">
-                        <dt class="text-sm font-medium text-gray-500">Account status</dt>
-                        <dd class="mt-1 text-sm text-gray-900 sm:mt-0 sm:col-span-2">
-                            <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium 
-                                       {% if user.verified %}bg-green-100 text-green-800{% else %}bg-red-100 text-red-800{% endif %}">
-                                {{ 'Active' if user.verified else 'Inactive' }}
-                            </span>
-                        </dd>
-                    </div>
-                    <div class="bg-gray-50 px-4 py-5 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-6">
-                        <dt class="text-sm font-medium text-gray-500">Registration date</dt>
-                        <dd class="mt-1 text-sm text-gray-900 sm:mt-0 sm:col-span-2">
-                            {{ user.registered_on.strftime('%B %d, %Y at %I:%M %p') if user.registered_on else 'N/A' }}
-                        </dd>
-                    </div>
-                    <div class="bg-white px-4 py-5 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-6">
-                        <dt class="text-sm font-medium text-gray-500">Coupon used</dt>
-                        <dd class="mt-1 text-sm text-gray-900 sm:mt-0 sm:col-span-2">
-                            {{ user.coupon_code or 'None' }}
-                        </dd>
-                    </div>
-                </dl>
-            </div>
-        </div>
+{% block title %}User Details | CalculatenTrade{% endblock %}
 
-        <!-- Recent Sessions -->
-        <div class="bg-white shadow overflow-hidden sm:rounded-lg">
-            <div class="px-4 py-5 sm:px-6">
-                <h3 class="text-lg leading-6 font-medium text-gray-900">Recent Sessions</h3>
-                <p class="mt-1 max-w-2xl text-sm text-gray-500">Last 5 login sessions for this user.</p>
-            </div>
-            {% if sessions %}
-            <div class="border-t border-gray-200">
-                <ul class="divide-y divide-gray-200">
-                    {% for session in sessions %}
-                    <li class="px-4 py-4 sm:px-6">
-                        <div class="flex items-center justify-between">
-                            <div class="flex items-center">
-                                <div class="flex-shrink-0">
-                                    <div class="h-8 w-8 rounded-full bg-gray-300 flex items-center justify-center">
-                                        <span class="text-xs font-medium text-gray-700">S</span>
-                                    </div>
-                                </div>
-                                <div class="ml-4">
-                                    <div class="text-sm font-medium text-gray-900">
-                                        {{ session.ip_address or 'Unknown IP' }}
-                                    </div>
-                                    <div class="text-sm text-gray-500">
-                                        {{ session.user_agent[:50] + '...' if session.user_agent and session.user_agent|length > 50 else session.user_agent or 'Unknown browser' }}
-                                    </div>
-                                </div>
-                            </div>
-                            <div class="flex items-center">
-                                <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium 
-                                           {% if session.is_active %}bg-green-100 text-green-800{% else %}bg-gray-100 text-gray-800{% endif %}">
-                                    {{ 'Active' if session.is_active else 'Ended' }}
-                                </span>
-                                <div class="ml-4 text-sm text-gray-500">
-                                    {{ session.last_activity.strftime('%m/%d/%Y %I:%M %p') if session.last_activity else 'N/A' }}
-                                </div>
-                            </div>
-                        </div>
-                    </li>
-                    {% endfor %}
-                </ul>
-            </div>
-            {% else %}
-            <div class="border-t border-gray-200 px-4 py-12 text-center">
-                <p class="text-gray-500">No session data available.</p>
-            </div>
-            {% endif %}
+{% block content %}
+<div class="">
+    <div class="page-title">
+        <div class="title_left">
+            <h3>User Details</h3>
         </div>
-        {% else %}
-        <div class="bg-white shadow overflow-hidden sm:rounded-lg">
-            <div class="px-4 py-12 text-center">
-                <p class="text-gray-500">User not found.</p>
-            </div>
-        </div>
-        {% endif %}
     </div>
-</body>
-</html>
+
+    <div class="clearfix"></div>
+
+    <div class="row">
+        <div class="col-md-8">
+            <div class="x_panel">
+                <div class="x_title">
+                    <h2>User Information</h2>
+                    <div class="clearfix"></div>
+                </div>
+                <div class="x_content">
+                    <table class="table table-striped">
+                        <tbody>
+                            <tr>
+                                <td><strong>User ID:</strong></td>
+                                <td>{{ user.id }}</td>
+                            </tr>
+                            <tr>
+                                <td><strong>Email:</strong></td>
+                                <td>{{ user.email }}</td>
+                            </tr>
+                            <tr>
+                                <td><strong>Name:</strong></td>
+                                <td>{{ user.name if user.name else 'N/A' }}</td>
+                            </tr>
+                            <tr>
+                                <td><strong>Status:</strong></td>
+                                <td>
+                                    <span class="badge {{ 'badge-success' if user.verified else 'badge-danger' }}">
+                                        {{ 'Active' if user.verified else 'Inactive' }}
+                                    </span>
+                                </td>
+                            </tr>
+                            <tr>
+                                <td><strong>Subscription:</strong></td>
+                                <td>
+                                    <span class="badge {{ 'badge-success' if user.subscription_active else 'badge-secondary' }}">
+                                        {{ 'Active' if user.subscription_active else 'Inactive' }}
+                                    </span>
+                                </td>
+                            </tr>
+                            <tr>
+                                <td><strong>Registered On:</strong></td>
+                                <td>{{ user.registered_on[:10] if user.registered_on else 'N/A' }}</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-4">
+            <div class="x_panel">
+                <div class="x_title">
+                    <h2>Quick Actions</h2>
+                    <div class="clearfix"></div>
+                </div>
+                <div class="x_content">
+                    <div class="btn-group-vertical" style="width: 100%;">
+                        <button onclick="toggleUser({{ user.id }}, {{ user.verified|lower }})" 
+                                class="btn {{ 'btn-danger' if user.verified else 'btn-success' }} mb-2"
+                                id="toggle-btn-{{ user.id }}">
+                            {{ 'Deactivate' if user.verified else 'Activate' }} User
+                        </button>
+                        <button onclick="disableLogin({{ user.id }})" 
+                                class="btn btn-warning mb-2">
+                            Disable Login
+                        </button>
+                        <a href="{{ url_for('employee_dashboard.users_list') }}" 
+                           class="btn btn-secondary">
+                            Back to Users
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    {% if sessions %}
+    <div class="row">
+        <div class="col-md-12">
+            <div class="x_panel">
+                <div class="x_title">
+                    <h2>Recent Sessions</h2>
+                    <div class="clearfix"></div>
+                </div>
+                <div class="x_content">
+                    <div class="table-responsive">
+                        <table class="table table-striped jambo_table">
+                            <thead>
+                                <tr>
+                                    <th>Session Token</th>
+                                    <th>IP Address</th>
+                                    <th>User Agent</th>
+                                    <th>Status</th>
+                                    <th>Created</th>
+                                    <th>Last Activity</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for session in sessions %}
+                                <tr>
+                                    <td>{{ session.session_token[:20] }}...</td>
+                                    <td>{{ session.ip_address }}</td>
+                                    <td>{{ session.user_agent[:50] }}...</td>
+                                    <td>
+                                        <span class="badge {{ 'badge-success' if session.is_active else 'badge-secondary' }}">
+                                            {{ 'Active' if session.is_active else 'Inactive' }}
+                                        </span>
+                                    </td>
+                                    <td>{{ session.created_at[:19] if session.created_at else 'N/A' }}</td>
+                                    <td>{{ session.last_activity[:19] if session.last_activity else 'N/A' }}</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+</div>
+
+<script>
+function toggleUser(userId, isVerified) {
+    const action = isVerified ? 'deactivate' : 'activate';
+    
+    if (confirm(`Are you sure you want to ${action} this user?`)) {
+        fetch(`/employee/api/user/${userId}/toggle`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                alert(data.message);
+                location.reload();
+            } else {
+                alert('Error: ' + data.error);
+            }
+        })
+        .catch(error => {
+            alert('Error: ' + error);
+        });
+    }
+}
+
+function disableLogin(userId) {
+    if (confirm('Are you sure you want to disable login for this user?')) {
+        fetch(`/employee/api/user/${userId}/disable-login`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                alert(data.message);
+                location.reload();
+            } else {
+                alert('Error: ' + data.error);
+            }
+        })
+        .catch(error => {
+            alert('Error: ' + error);
+        });
+    }
+}
+</script>
+{% endblock %}

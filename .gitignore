@@ -3,13 +3,11 @@
 .env.local
 .env.production
 
-# OAuth credentials
-client_secret.json
-
 # Database files
 *.db
 *.sqlite
 *.sqlite3
+instance/
 
 # Python cache
 __pycache__/
@@ -30,26 +28,22 @@ ENV/
 *.swp
 *.swo
 
+# Logs
+*.log
+app_output.log
+
+# Uploads and user content
+uploads/
+static/profile_pics/
+
+# Secrets and credentials
+client_secret.json
+*.pem
+*.key
+
 # OS files
 .DS_Store
 Thumbs.db
 
-# Logs
-*.log
-logs/
-
-# Instance folder
-instance/
-
-# Flask session files
-flask_session/
-
-# Uploads
-uploads/
-
-# Node modules (if any)
-node_modules/
-
-# Build files
-build/
-dist/
+# Temporary files
+tempCodeRunnerFile.py

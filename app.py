@@ -10,7 +10,8 @@ from datetime import datetime, timedelta
 from functools import wraps
 from typing import Optional, Tuple
 from difflib import get_close_matches
-from journal import calculatentrade_bp,db
+from journal import calculatentrade_bp
+from journal import db
 # app.py
 from flask_login import LoginManager, login_user, logout_user, current_user, login_required,UserMixin
 # ... other imports
@@ -58,9 +59,9 @@ app.jinja_env.cache = {}
 # Session stability - use stable secret key from env
 app.secret_key = os.getenv('FLASK_SECRET', 'dev-secret-change-this')
 
-# Temporarily use SQLite for development
+# Use SQLite for development
 # from urllib.parse import quote_plus
-# db_location = f'postgresql://{DB_USER}:{DB_PASSWORD}@{DB_HOST}:{DB_PORT}/{DB_NAME}'
+# db_location = f'postgresql://{DB_USER}:{quote_plus(DB_PASSWORD)}@{DB_HOST}:{DB_PORT}/{DB_NAME}'
 db_location = 'sqlite:///calculatentrade.db'
 app.config["SQLALCHEMY_DATABASE_URI"] = db_location
 
@@ -103,11 +104,6 @@ login_manager.init_app(app)
 
 @login_manager.user_loader
 def load_user(user_id):
-    return User.query.get(int(user_id))
-      # IMPORTANT — attaches to app so app.login_manager exists
-
-@login_manager.user_loader
-def load_user(user_id):
     try:
         return User.query.get(int(user_id))
     except Exception:
@@ -115,6 +111,47 @@ def load_user(user_id):
 
 # Now register blueprint AFTER login manager initialization
 app.register_blueprint(calculatentrade_bp)
+
+# Register admin blueprint
+from admin_blueprint import admin_bp, init_admin_db
+app.register_blueprint(admin_bp, url_prefix='/admin')
+
+# Register employee dashboard blueprint
+from employee_dashboard_bp import employee_dashboard_bp, init_employee_dashboard_db
+app.register_blueprint(employee_dashboard_bp, url_prefix='/employee')
+
+# Register mentor blueprint
+from mentor import mentor_bp, init_mentor_db
+app.register_blueprint(mentor_bp, url_prefix='/mentor')
+
+# Initialize blueprint databases immediately after registration
+with app.app_context():
+    # First create main database tables
+    try:
+        db.create_all()
+        print("Main database tables created successfully")
+    except Exception as e:
+        print(f"Error creating main database tables: {e}")
+    
+    try:
+        init_admin_db(db)
+        print("Admin blueprint database initialized")
+    except Exception as e:
+        print(f"Error initializing admin blueprint: {e}")
+    
+    try:
+        init_employee_dashboard_db(db)
+        print("Employee dashboard blueprint database initialized")
+    except Exception as e:
+        print(f"Error initializing employee dashboard blueprint: {e}")
+    
+    try:
+        init_mentor_db(db)
+        print("Mentor blueprint database initialized")
+    except Exception as e:
+        print(f"Error creating mentor models: {e}")
+    
+
 
 
 migrate = Migrate(app, db)
@@ -127,8 +164,13 @@ DHAN_CLIENT_ID = os.environ.get("DHAN_CLIENT_ID")
 
 DHAN_BASE_URL = "https://api.dhan.co"
 
-# Timezone setup
-IST = pytz.timezone("Asia/Kolkata")
+# Timezone setup with error handling
+try:
+    IST = pytz.timezone("Asia/Kolkata")
+except Exception as e:
+    print(f"Warning: Failed to initialize timezone: {e}")
+    # Fallback to UTC if IST fails
+    IST = pytz.UTC
 
 # ------------------------------------------------------------------------------
 # Mail (Gmail SMTP) configuration
@@ -166,10 +208,16 @@ def get_redirect_uri():
 
 def create_flow(state=None):
     """Create Google OAuth flow"""
+    import os
+    os.environ['OAUTHLIB_INSECURE_TRANSPORT'] = '1'  # Allow HTTP for development
+    
     redirect_uri = get_redirect_uri()
     
+    # Get the absolute path to client_secret.json
+    client_secret_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'client_secret.json')
+    
     flow = Flow.from_client_secrets_file(
-        'client_secret.json',
+        client_secret_path,
         scopes=['https://www.googleapis.com/auth/userinfo.email', 'https://www.googleapis.com/auth/userinfo.profile', 'openid'],
         redirect_uri=redirect_uri
     )
@@ -195,6 +243,11 @@ class User(UserMixin, db.Model):
     google_id = db.Column(db.String(100), nullable=True, unique=True)  # Google OAuth ID
     profile_pic = db.Column(db.String(200), nullable=True)  # Profile picture URL
     name = db.Column(db.String(100), nullable=True)  # Full name from Google
+    
+    # Subscription fields
+    subscription_active = db.Column(db.Boolean, nullable=False, default=False)
+    subscription_expires = db.Column(db.DateTime, nullable=True)
+    subscription_type = db.Column(db.String(20), nullable=True)  # 'monthly' or 'yearly'
 
     def set_password(self, password: str):
         self.password_hash = generate_password_hash(password)
@@ -203,6 +256,13 @@ class User(UserMixin, db.Model):
         if not self.password_hash:
             return False
         return check_password_hash(self.password_hash, password)
+    
+    def has_active_subscription(self) -> bool:
+        if not self.subscription_active:
+            return False
+        if self.subscription_expires and datetime.utcnow() > self.subscription_expires:
+            return False
+        return True
 
 
 class ResetOTP(db.Model):
@@ -235,6 +295,20 @@ class EmailVerifyOTP(db.Model):
         return datetime.utcnow() > self.expires_at
 
 
+class UserSettings(db.Model):
+    __tablename__ = "user_settings"
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    email_notifications = db.Column(db.Boolean, default=True)
+    theme = db.Column(db.String(20), default='light')
+    timezone = db.Column(db.String(50), default='Asia/Kolkata')
+    default_calculator = db.Column(db.String(20), default='intraday')
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    
+    user = db.relationship('User', backref=db.backref('settings', uselist=False))
+
+
 # Base Trade Model for all calculator types
 class BaseTrade(db.Model):
     __abstract__ = True
@@ -257,21 +331,26 @@ class BaseTrade(db.Model):
 
 class IntradayTrade(BaseTrade):
     __tablename__ = "intraday_trades"
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=True)
     leverage = db.Column(db.Float, nullable=True)
     lot_size = db.Column(db.Integer, nullable=True)
     derivative_name = db.Column(db.String(100), nullable=True)
 
 class DeliveryTrade(BaseTrade):
     __tablename__ = "delivery_trades"
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=True)
 
 class SwingTrade(BaseTrade):
     __tablename__ = "swing_trades"
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=True)
 
 class MTFTrade(BaseTrade):
     __tablename__ = "mtf_trades"
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=True)
 
 class FOTrade(BaseTrade):
     __tablename__ = "fo_trades"
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=True)
     strike_price = db.Column(db.Float, nullable=True)
     expiry_date = db.Column(db.Date, nullable=True)
     option_type = db.Column(db.String(10), nullable=True)  # CE/PE
@@ -644,6 +723,20 @@ def login_required(f):
         return f(*args, **kwargs)
     return decorated_function
 
+def subscription_required(f):
+    @wraps(f)
+    def decorated_function(*args, **kwargs):
+        if "email" not in session:
+            flash("Please log in first.", "error")
+            return redirect(url_for("login"))
+        
+        user = User.query.filter_by(email=session["email"]).first()
+        if not user or not user.has_active_subscription():
+            return render_template("subscription_required.html")
+        
+        return f(*args, **kwargs)
+    return decorated_function
+
 
 def password_policy_ok(pw: str) -> bool:
     if len(pw) < 8:
@@ -775,6 +868,10 @@ def verify_signup_otp(email: str, otp_input: str) -> Tuple[bool, str, Optional[E
 @app.route("/")
 def home():
     return render_template("home.html")
+
+@app.route("/employee-portal")
+def employee_portal():
+    return redirect(url_for('employee_dashboard.employee_login'))
 
 # Registration
 @app.route("/register", methods=["GET", "POST"])
@@ -927,49 +1024,203 @@ def logout():
     flash("Logged out.", "info")
     return redirect(url_for("login"))
 
+# Subscription routes
+@app.route("/subscription")
+@login_required
+def subscription():
+    user = User.query.filter_by(email=session["email"]).first()
+    return render_template("subscription.html", user=user)
+
+@app.route("/purchase_subscription", methods=["POST"])
+@login_required
+def purchase_subscription():
+    plan_type = request.form.get("plan_type")
+    
+    if plan_type not in ["monthly", "yearly"]:
+        flash("Invalid plan type.", "error")
+        return redirect(url_for("subscription"))
+    
+    user = User.query.filter_by(email=session["email"]).first()
+    
+    # Set subscription
+    user.subscription_active = True
+    user.subscription_type = plan_type
+    
+    if plan_type == "monthly":
+        user.subscription_expires = datetime.utcnow() + timedelta(days=30)
+    else:  # yearly
+        user.subscription_expires = datetime.utcnow() + timedelta(days=365)
+    
+    db.session.commit()
+    
+    flash(f"Successfully purchased {plan_type} subscription!", "success")
+    return redirect(url_for("home"))
+
+@app.route("/terms")
+def terms():
+    return render_template("terms.html")
+
+@app.route("/privacy-policy")
+def privacy_policy():
+    return render_template("privacy_policy.html")
+
+@app.route("/refund-policy")
+def refund_policy():
+    return render_template("refund_policy.html")
+
+
+@app.route('/settings', methods=['GET', 'POST'])
+@login_required
+def settings():
+    user_settings = UserSettings.query.filter_by(user_id=current_user.id).first()
+    if not user_settings:
+        user_settings = UserSettings(user_id=current_user.id)
+        db.session.add(user_settings)
+        db.session.commit()
+    
+    if request.method == 'POST':
+        action = request.form.get('action')
+        
+        if action == 'update_settings':
+            user_settings.email_notifications = 'email_notifications' in request.form
+            user_settings.theme = request.form.get('theme', 'light')
+            user_settings.timezone = request.form.get('timezone', 'Asia/Kolkata')
+            user_settings.default_calculator = request.form.get('default_calculator', 'intraday')
+            user_settings.updated_at = datetime.utcnow()
+            
+            db.session.commit()
+            flash('Settings updated successfully!', 'success')
+            return redirect(url_for('settings'))
+    
+    return render_template('settings.html', settings=user_settings)
+
+
+@app.route('/delete_account', methods=['POST'])
+@login_required
+def delete_account():
+    password = request.form.get('password')
+    confirm_text = request.form.get('confirm_text')
+    
+    # Verify password for regular users
+    if current_user.password_hash and not current_user.check_password(password):
+        flash('Incorrect password. Account deletion cancelled.', 'error')
+        return redirect(url_for('settings'))
+    
+    # Verify confirmation text
+    if confirm_text != 'DELETE MY ACCOUNT':
+        flash('Confirmation text incorrect. Account deletion cancelled.', 'error')
+        return redirect(url_for('settings'))
+    
+    try:
+        user_id = current_user.id
+        user_email = current_user.email
+        
+        # Delete all user-related data
+        UserSettings.query.filter_by(user_id=user_id).delete()
+        ResetOTP.query.filter_by(email=user_email).delete()
+        EmailVerifyOTP.query.filter_by(email=user_email).delete()
+        
+        # Delete calculator trades (all trades are stored in IntradayTrade table)
+        user_trades = IntradayTrade.query.filter_by(user_id=user_id).all()
+        trade_ids = [trade.id for trade in user_trades]
+        
+        # Delete trade splits for user's trades
+        if trade_ids:
+            TradeSplit.query.filter(TradeSplit.trade_id.in_(trade_ids)).delete(synchronize_session=False)
+        
+        # Delete all user trades
+        IntradayTrade.query.filter_by(user_id=user_id).delete()
+        DeliveryTrade.query.filter_by(user_id=user_id).delete()
+        SwingTrade.query.filter_by(user_id=user_id).delete()
+        MTFTrade.query.filter_by(user_id=user_id).delete()
+        FOTrade.query.filter_by(user_id=user_id).delete()
+        
+        # Delete templates
+        PreviewTemplate.query.filter_by(user_id=user_id).delete()
+        AIPlanTemplate.query.filter_by(user_id=user_id).delete()
+        
+        # Delete user account
+        db.session.delete(current_user)
+        db.session.commit()
+        
+        # Logout user
+        logout_user()
+        
+        # Clear session
+        session.clear()
+        
+        flash('Account successfully deleted. All your data has been permanently removed.', 'success')
+        return redirect(url_for('home'))
+        
+    except Exception as e:
+        db.session.rollback()
+        flash('Error deleting account. Please try again or contact support.', 'error')
+        return redirect(url_for('settings'))
+
 # Google OAuth Routes (using google_auth_oauthlib.flow)
 @app.route('/oauth/login')
 def oauth_login():
     """Start Google OAuth flow"""
-    flow = create_flow()
-    authorization_url, state = flow.authorization_url(
-        access_type='offline',
-        include_granted_scopes='true',
-        prompt='consent'
-    )
-    session['state'] = state
-    app.logger.debug("Saved state -> %s", state)
-    return redirect(authorization_url)
+    try:
+        flow = create_flow()
+        authorization_url, state = flow.authorization_url(
+            access_type='offline',
+            include_granted_scopes='true',
+            prompt='consent'
+        )
+        session['oauth_state'] = state  # Use different key to avoid conflicts
+        app.logger.info(f"Starting OAuth flow with state: {state[:10]}...")
+        return redirect(authorization_url)
+    except Exception as e:
+        app.logger.error(f"OAuth login error: {e}")
+        flash('Failed to start Google login. Please try again.', 'error')
+        return redirect(url_for('login'))
 
 @app.route('/auth/google/callback')
 def oauth_callback():
     """Handle OAuth callback"""
     try:
-        # Log state verification
-        session_state = session.get('state')
+        # Get states
+        session_state = session.get('oauth_state')
         returned_state = request.args.get('state')
-        app.logger.debug("Session state -> %s", session_state)
-        app.logger.debug("Returned state -> %s", returned_state)
         
-        # Verify state parameter
-        if 'state' not in session or session['state'] != returned_state:
-            app.logger.error("State mismatch: session=%s, returned=%s", session_state, returned_state)
-            flash('Invalid state parameter. Please try again.', 'error')
+        app.logger.info(f"OAuth callback - Session state: {session_state[:10] if session_state else 'None'}..., Returned: {returned_state[:10] if returned_state else 'None'}...")
+        
+        # Check for error in callback
+        error = request.args.get('error')
+        if error:
+            app.logger.error(f"OAuth error from Google: {error}")
+            flash('Google authentication was cancelled or failed.', 'error')
             return redirect(url_for('login'))
         
-        flow = create_flow(state=session_state)
+        # Verify state parameter
+        if not session_state or session_state != returned_state:
+            app.logger.error(f"State mismatch: session={session_state}, returned={returned_state}")
+            flash('Security check failed. Please try logging in again.', 'error')
+            return redirect(url_for('login'))
+        
+        # Create flow and fetch token
+        flow = create_flow()
         flow.fetch_token(authorization_response=request.url)
         
-        # Get user info
+        # Get user info from Google
         credentials = flow.credentials
         user_info_response = requests.get(
             'https://www.googleapis.com/oauth2/v2/userinfo',
-            headers={'Authorization': f'Bearer {credentials.token}'}
+            headers={'Authorization': f'Bearer {credentials.token}'},
+            timeout=10
         )
-        user_info = user_info_response.json()
         
+        if user_info_response.status_code != 200:
+            app.logger.error(f"Failed to get user info: {user_info_response.status_code}")
+            flash('Failed to get user information from Google.', 'error')
+            return redirect(url_for('login'))
+        
+        user_info = user_info_response.json()
         email = user_info.get('email')
+        
         if not email:
+            app.logger.error("No email in Google response")
             flash('Failed to get email from Google.', 'error')
             return redirect(url_for('login'))
         
@@ -977,7 +1228,7 @@ def oauth_callback():
         user = User.query.filter_by(email=email).first()
         
         if user:
-            # Update existing user with Google info
+            # Update existing user with Google info if needed
             if not user.google_id:
                 user.google_id = user_info.get('id')
                 user.name = user_info.get('name', '')
@@ -987,6 +1238,9 @@ def oauth_callback():
             
             login_user(user, remember=False)
             session["email"] = user.email
+            session.pop('oauth_state', None)  # Clean up
+            
+            app.logger.info(f"User {email} logged in via Google")
             flash('Successfully logged in with Google!', 'success')
             return redirect(url_for('home'))
         else:
@@ -1005,11 +1259,15 @@ def oauth_callback():
             
             login_user(new_user, remember=False)
             session["email"] = new_user.email
+            session.pop('oauth_state', None)  # Clean up
+            
+            app.logger.info(f"New user {email} created via Google")
             flash('Account created and logged in with Google!', 'success')
             return redirect(url_for('home'))
             
     except Exception as e:
-        app.logger.error(f"OAuth error: {e}")
+        app.logger.error(f"OAuth callback error: {e}")
+        session.pop('oauth_state', None)  # Clean up on error
         flash('Authentication failed. Please try again.', 'error')
         return redirect(url_for('login'))
 
@@ -1086,13 +1344,13 @@ def verify_otp_route():
 # Intraday calculator + related routes
 # ------------------------------------------------------------------------------
 @app.route("/calculator")
-@login_required
+@subscription_required
 def calculator():
     return render_template("calculator.html")
 
 # Universal calculator route
 @app.route("/<calc_type>_calculator", methods=["GET", "POST"])
-@login_required
+@subscription_required
 def universal_calculator(calc_type):
     if calc_type not in CALCULATOR_CONFIG:
         return redirect(url_for('calculator'))
@@ -1126,13 +1384,13 @@ def universal_calculator(calc_type):
 
 # Keep original intraday route for backward compatibility
 @app.route("/intraday_calculator", methods=["GET", "POST"])
-@login_required
+@subscription_required
 def intraday():
     return universal_calculator('intraday')
 
 # Universal save route
 @app.route("/save_<calc_type>_result", methods=["POST"])
-@login_required
+@subscription_required
 def save_universal_result(calc_type):
     if calc_type not in CALCULATOR_CONFIG:
         return jsonify({"error": "Invalid calculator type"}), 400
@@ -1158,6 +1416,7 @@ def save_universal_result(calc_type):
         
         # Create trade instance
         trade_data = {
+            "user_id": current_user.id,  # Associate trade with current user
             "trade_type": data.get("trade_type", "buy"),
             "avg_price": float(data.get("avg_price")),
             "quantity": int(data.get("quantity")),
@@ -1239,7 +1498,7 @@ def normalize_trade(trade):
 
 # Universal saved trades route
 @app.route("/saved_<calc_type>")
-@login_required
+@subscription_required
 def show_saved_universal_trades(calc_type):
     if calc_type not in CALCULATOR_CONFIG:
         return redirect(url_for('calculator'))
@@ -1247,7 +1506,7 @@ def show_saved_universal_trades(calc_type):
     try:
         config = CALCULATOR_CONFIG[calc_type]
         model = config['model']
-        trades = model.query.order_by(model.id.desc()).all()
+        trades = model.query.filter_by(user_id=current_user.id).order_by(model.id.desc()).all()
         normalized_trades = [normalize_trade(trade) for trade in trades]
         
         missing_symbol_count = sum(1 for t in normalized_trades if not t['symbol'])
@@ -1260,7 +1519,7 @@ def show_saved_universal_trades(calc_type):
 
 # Keep original saved route for backward compatibility
 @app.route("/saved")
-@login_required
+@subscription_required
 def show_saved_trades():
     return show_saved_universal_trades('intraday')
 
@@ -2592,7 +2851,7 @@ def add_to_journal():
 
 # New calculator routes
 @app.route('/fo_calculator', methods=['GET', 'POST'])
-@login_required
+@subscription_required
 def fo_calculator():
     if request.method == 'POST':
         try:
@@ -2641,7 +2900,7 @@ def fo_calculator():
     return render_template('fo_calculator.html')
 
 @app.route('/mtf_calculator', methods=['GET', 'POST'])
-@login_required
+@subscription_required
 def mtf_calculator():
     if request.method == 'POST':
         try:
@@ -2692,7 +2951,7 @@ def mtf_calculator():
     return render_template('mtf_calculator.html')
 
 @app.route('/swing_calculator', methods=['GET', 'POST'])
-@login_required
+@subscription_required
 def swing_calculator():
     if request.method == 'POST':
         try:
@@ -2739,7 +2998,7 @@ def swing_calculator():
     return render_template('swing_calculator.html')
 
 @app.route('/delivery_calculator', methods=['GET', 'POST'])
-@login_required
+@subscription_required
 def delivery_calculator():
     if request.method == 'POST':
         try:
@@ -2787,7 +3046,7 @@ def delivery_calculator():
 
 # Saved pages routes
 @app.route('/saved_fno')
-@login_required
+@subscription_required
 def saved_fno():
     try:
         # F&O trades are identified by having lot_size field set
@@ -2802,7 +3061,7 @@ def saved_fno():
         return render_template('saved_fno.html', trades=[])
 
 @app.route('/saved_mtf')
-@login_required
+@subscription_required
 def saved_mtf():
     try:
         trades = IntradayTrade.query.filter(IntradayTrade.leverage.isnot(None)).order_by(IntradayTrade.id.desc()).all()
@@ -2812,7 +3071,7 @@ def saved_mtf():
         return render_template('saved_mtf.html', trades=[])
 
 @app.route('/saved_swing')
-@login_required
+@subscription_required
 def saved_swing():
     try:
         trades = IntradayTrade.query.filter(IntradayTrade.leverage.is_(None), IntradayTrade.lot_size.is_(None)).order_by(IntradayTrade.id.desc()).all()
@@ -2822,7 +3081,7 @@ def saved_swing():
         return render_template('saved_swing.html', trades=[])
 
 @app.route('/saved_delivery')
-@login_required
+@subscription_required
 def saved_delivery():
     try:
         trades = IntradayTrade.query.filter(IntradayTrade.leverage.is_(None), IntradayTrade.lot_size.is_(None)).order_by(IntradayTrade.id.desc()).all()
@@ -2986,6 +3245,7 @@ def save_fno_result():
     
     try:
         trade_data = {
+            'user_id': current_user.id,
             'trade_type': data.get('trade_type', 'buy'),
             'avg_price': float(data.get('avg_price')),
             'quantity': int(data.get('quantity')),
@@ -3043,6 +3303,7 @@ def save_mtf_result():
         
         # Add leverage for MTF trades
         trade_data['leverage'] = float(data.get('leverage', 1))
+        trade_data['user_id'] = current_user.id
             
         trade = IntradayTrade(**trade_data)
         db.session.add(trade)
@@ -3061,6 +3322,7 @@ def save_swing_result():
     
     try:
         trade = IntradayTrade(
+            user_id=current_user.id,
             trade_type=data.get('trade_type', 'buy'),
             avg_price=float(data.get('avg_price')),
             quantity=int(data.get('quantity')),
@@ -3091,6 +3353,7 @@ def save_delivery_result():
     
     try:
         trade = IntradayTrade(
+            user_id=current_user.id,
             trade_type=data.get('trade_type', 'buy'),
             avg_price=float(data.get('avg_price')),
             quantity=int(data.get('quantity')),
@@ -3579,66 +3842,16 @@ def favicon():
 # Main
 # ------------------------------------------------------------------------------
 if __name__ == "__main__":
-    # Create database tables if they don't exist
-    with app.app_context():
-        # Auto-migrate tables
-        try:
-            # Add new columns to intraday_trades table
-            db.engine.execute("ALTER TABLE intraday_trades ADD COLUMN IF NOT EXISTS leverage FLOAT NULL")
-            db.engine.execute("ALTER TABLE intraday_trades ADD COLUMN IF NOT EXISTS lot_size INTEGER NULL")
-            db.engine.execute("ALTER TABLE intraday_trades ADD COLUMN IF NOT EXISTS derivative_name VARCHAR(100) NULL")
-            print("Intraday trades table migrated successfully")
-            
-            # Add Google OAuth columns to user table
-            try:
-                db.engine.execute("ALTER TABLE user ADD COLUMN google_id VARCHAR(100)")
-            except:
-                pass
-            try:
-                db.engine.execute("ALTER TABLE user ADD COLUMN profile_pic VARCHAR(200)")
-            except:
-                pass
-            try:
-                db.engine.execute("ALTER TABLE user ADD COLUMN name VARCHAR(100)")
-            except:
-                pass
-            print("User table migrated for Google OAuth successfully")
-            
-            # Rule table migration
-            db.engine.execute("ALTER TABLE rule ADD COLUMN IF NOT EXISTS category VARCHAR(50) DEFAULT 'Risk'")
-            db.engine.execute("ALTER TABLE rule ADD COLUMN IF NOT EXISTS tags TEXT")
-            db.engine.execute("ALTER TABLE rule ADD COLUMN IF NOT EXISTS priority VARCHAR(10) DEFAULT 'medium'")
-            db.engine.execute("ALTER TABLE rule ADD COLUMN IF NOT EXISTS active BOOLEAN DEFAULT true")
-            db.engine.execute("ALTER TABLE rule ADD COLUMN IF NOT EXISTS linked_strategy_id INTEGER")
-            db.engine.execute("ALTER TABLE rule ADD COLUMN IF NOT EXISTS violation_consequence VARCHAR(20) DEFAULT 'log'")
-            db.engine.execute("ALTER TABLE rule ADD COLUMN IF NOT EXISTS save_template BOOLEAN DEFAULT false")
-            db.engine.execute("ALTER TABLE rule ADD COLUMN IF NOT EXISTS updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP")
-            print("Rule table migrated successfully")
-        except Exception as e:
-            print(f"Migration info: {e}")
-        
-        db.create_all()
-        
-
-
-        
-        # Register and initialize admin blueprint
-        from admin_blueprint import admin_bp, init_admin_db
-        app.register_blueprint(admin_bp, url_prefix='/admin')
-        init_admin_db(db)
-        print("Admin blueprint registered and tables initialized")
-        
-        # Register and initialize employee blueprint
-        from employee_blueprint import employee_bp, init_employee_db
-        app.register_blueprint(employee_bp, url_prefix='/employee')
-        init_employee_db(db)
-        print("Employee blueprint registered and tables initialized")
-        
-        # Register and initialize employee dashboard blueprint
-        from employee_dashboard_bp import employee_dashboard_bp, init_employee_dashboard_db
-        app.register_blueprint(employee_dashboard_bp)
-        init_employee_dashboard_db(db)
-        print("Employee dashboard blueprint registered and tables initialized")
+    # This will only run if app.py is executed directly
+    # For proper startup, use run_app.py instead
+    print("Warning: Running app.py directly. Use run_app.py for proper initialization.")
     
-if __name__ == "__main__":
+    # Initialize timezone
+    try:
+        IST = pytz.timezone("Asia/Kolkata")
+        print("Timezone initialized successfully")
+    except Exception as e:
+        print(f"Warning: Timezone initialization failed: {e}")
+        IST = pytz.UTC
+    
     app.run(host="0.0.0.0", port="5000", debug=True)

@@ -1,16 +1,29 @@
-FROM python:3.12-slim
+FROM python:3.9-slim
 
-# install system deps required to build psycopg2 and other wheels
-RUN apt-get update && \
-    apt-get install -y --no-install-recommends \
-      build-essential gcc libpq-dev && \
-    rm -rf /var/lib/apt/lists/*
-
+# Set working directory
 WORKDIR /app
-COPY requirements.txt .
-RUN pip install --no-cache-dir -r requirements.txt
 
+# Install system dependencies
+RUN apt-get update && apt-get install -y \
+    gcc \
+    && rm -rf /var/lib/apt/lists/*
+
+# Copy requirements and install Python dependencies
+COPY requirements-aws.txt .
+RUN pip install --no-cache-dir -r requirements-aws.txt
+
+# Copy application code
 COPY . .
-# CMD ["gunicorn","-w","4","app:app"]
-CMD ["python","app.py"]
+
+# Create instance directory for SQLite
+RUN mkdir -p instance
+
+# Expose port
 EXPOSE 5000
+
+# Set environment variables
+ENV FLASK_ENV=production
+ENV PYTHONPATH=/app
+
+# Run the application
+CMD ["python", "application.py"]
