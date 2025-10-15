@@ -3479,7 +3479,7 @@ def connect_broker():
                          existing_connections=existing_connections)
 
 # ---------- Helper for TOTP secret normalization ----------
-def _normalize_base32_secret(s: str) -> str | None:
+def _normalize_base32_secret(s: str):
     """
     Normalize a user-supplied TOTP secret into valid Base32.
     Accepts:
