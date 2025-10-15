@@ -240,7 +240,7 @@ class User(UserMixin, db.Model):
     subscription_type = db.Column(db.String(20), nullable=True)  # 'monthly' or 'yearly'
 
     def set_password(self, password: str):
-        self.password_hash = generate_password_hash(password)d)
+        self.password_hash = generate_password_hash(password)
 
     def check_password(self, password: str) -> bool:
         if not self.password_hash:
