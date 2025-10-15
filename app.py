@@ -22,7 +22,7 @@ from google_auth_oauthlib.flow import Flow
 from dotenv import load_dotenv
 import requests
 import json
-import sqlite3
+
 import pytz
 from datetime import datetime, timedelta
 
@@ -40,12 +40,7 @@ load_dotenv()
 app = Flask(__name__)
 # Template configuration to prevent encoding issues
 
-DB_HOST = os.getenv("DB_HOST")
-DB_PORT = os.getenv("DB_PORT")
-DB_NAME = os.getenv("DB_NAME")
-DB_USER = os.getenv("DB_USER")
-DB_PASSWORD = os.getenv("DB_PASSWORD")
-SECRET_KEY = os.getenv('SECRET_KEY')
+
 
 
 app.config['TEMPLATES_AUTO_RELOAD'] = True
@@ -56,16 +51,22 @@ app.jinja_env.cache = {}
 # Session stability - use stable secret key from env
 app.secret_key = os.getenv('FLASK_SECRET', 'dev-secret-change-this')
 
-# Database configuration
+# PostgreSQL Database configuration
 if os.getenv('DATABASE_URL'):
-    # Production: Use PostgreSQL from DATABASE_URL
+    # Production: Use DATABASE_URL (Render/Heroku style)
     db_location = os.getenv('DATABASE_URL')
     if db_location.startswith('postgres://'):
         db_location = db_location.replace('postgres://', 'postgresql://', 1)
 else:
-    # Development: Use SQLite
-    db_location = 'sqlite:///calculatentrade.db'
+    # Development: Build PostgreSQL URL from components
+    DB_HOST = os.getenv('DB_HOST', 'localhost')
+    DB_PORT = os.getenv('DB_PORT', '5432')
+    DB_NAME = os.getenv('DB_NAME', 'calculatentrade')
+    DB_USER = os.getenv('DB_USER', 'postgres')
+    DB_PASSWORD = os.getenv('DB_PASSWORD', 'password')
+    db_location = f'postgresql://{DB_USER}:{DB_PASSWORD}@{DB_HOST}:{DB_PORT}/{DB_NAME}'
 
+print('\n\n PostgreSQL DB location ====>', db_location, '\n\n')
 app.config["SQLALCHEMY_DATABASE_URI"] = db_location
 
 
@@ -114,33 +115,31 @@ def load_user(user_id):
 
 # Blueprint registration will be done after models are defined
 
-# Database initialization will be handled by init_db.py in production
-# Only initialize in development
-if not os.getenv('DATABASE_URL'):
-    with app.app_context():
-        try:
-            db.create_all()
-            print("Development database tables created successfully")
-        except Exception as e:
-            print(f"Error creating development database tables: {e}")
-        
-        try:
-            init_admin_db(db)
-            print("Admin blueprint database initialized")
-        except Exception as e:
-            print(f"Error initializing admin blueprint: {e}")
-        
-        try:
-            init_employee_dashboard_db(db)
-            print("Employee dashboard blueprint database initialized")
-        except Exception as e:
-            print(f"Error initializing employee dashboard blueprint: {e}")
-        
-        try:
-            init_mentor_db(db)
-            print("Mentor blueprint database initialized")
-        except Exception as e:
-            print(f"Error creating mentor models: {e}")
+# Database initialization
+with app.app_context():
+    try:
+        db.create_all()
+        print("PostgreSQL database tables created successfully")
+    except Exception as e:
+        print(f"Error creating PostgreSQL database tables: {e}")
+    
+    try:
+        init_admin_db(db)
+        print("Admin blueprint database initialized")
+    except Exception as e:
+        print(f"Error initializing admin blueprint: {e}")
+    
+    try:
+        init_employee_dashboard_db(db)
+        print("Employee dashboard blueprint database initialized")
+    except Exception as e:
+        print(f"Error initializing employee dashboard blueprint: {e}")
+    
+    try:
+        init_mentor_db(db)
+        print("Mentor blueprint database initialized")
+    except Exception as e:
+        print(f"Error creating mentor models: {e}")
     
 
 
@@ -241,7 +240,7 @@ class User(UserMixin, db.Model):
     subscription_type = db.Column(db.String(20), nullable=True)  # 'monthly' or 'yearly'
 
     def set_password(self, password: str):
-        self.password_hash = generate_password_hash(password)
+        self.password_hash = generate_password_hash(password)d)
 
     def check_password(self, password: str) -> bool:
         if not self.password_hash:
