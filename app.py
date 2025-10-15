@@ -3,6 +3,7 @@ import secrets
 import hashlib
 import time
 import logging
+import sqlite3
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -917,6 +918,7 @@ def register():
             return redirect(url_for("verify_email_route", email=email))
 
         except Exception as e:
+            print('\n\nerror ==>', e, '\n\n')
             db.session.rollback()
             print("[REGISTER][ERROR]", e)
             msg = "Registration failed. Please try again."
@@ -1020,6 +1022,15 @@ def logout():
 def subscription():
     user = User.query.filter_by(email=session["email"]).first()
     return render_template("subscription.html", user=user)
+
+@app.route("/api/check-email")
+def check_email():
+    email = request.args.get("email", "").strip().lower()
+    if not email:
+        return jsonify({"exists": False})
+    
+    user = User.query.filter_by(email=email).first()
+    return jsonify({"exists": bool(user)})
 
 @app.route("/purchase_subscription", methods=["POST"])
 @login_required
