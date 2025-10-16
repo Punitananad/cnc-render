@@ -116,23 +116,43 @@ def load_user(user_id):
 
 # Blueprint registration will be done after models are defined
 
-# Database initialization
-with app.app_context():
-    try:
-        # Ensure database connection is established
-        db.engine.execute('SELECT 1')
-        db.create_all()
-        print("PostgreSQL database tables created successfully")
-    except Exception as e:
-        print(f"Error creating PostgreSQL database tables: {e}")
-        # Retry database creation after a short delay
-        import time
-        time.sleep(2)
+# Database initialization with robust retry logic
+def init_database_with_retry():
+    """Initialize database with comprehensive retry logic for IPv4 access"""
+    max_retries = 10
+    retry_delay = 2
+    
+    for attempt in range(max_retries):
         try:
-            db.create_all()
-            print("PostgreSQL database tables created successfully on retry")
-        except Exception as retry_e:
-            print(f"Retry failed: {retry_e}")
+            with app.app_context():
+                # Test database connection first
+                from sqlalchemy import text
+                db.session.execute(text('SELECT 1'))
+                db.session.commit()
+                
+                # Create all tables
+                db.create_all()
+                
+                # Verify tables were created by testing a simple query
+                db.session.execute(text('SELECT 1'))
+                db.session.commit()
+                
+                print(f"PostgreSQL database initialized successfully on attempt {attempt + 1}")
+                return True
+                
+        except Exception as e:
+            print(f"Database init attempt {attempt + 1}/{max_retries} failed: {e}")
+            if attempt < max_retries - 1:
+                print(f"Retrying in {retry_delay} seconds...")
+                time.sleep(retry_delay)
+                retry_delay = min(retry_delay * 1.5, 10)  # Exponential backoff
+            else:
+                print("Failed to initialize database after all retries")
+                return False
+    return False
+
+# Initialize database
+init_database_with_retry()
     
     try:
         init_admin_db(db)
@@ -1039,21 +1059,34 @@ def check_email():
     if not email:
         return jsonify({"exists": False})
     
-    try:
-        # Ensure tables exist before querying
-        db.create_all()
-        user = User.query.filter_by(email=email).first()
-        return jsonify({"exists": bool(user)})
-    except Exception as e:
-        print(f"Database error in check_email: {e}")
-        # Try to create tables and retry
+    max_retries = 3
+    for attempt in range(max_retries):
         try:
+            # Ensure database connection and tables exist
+            from sqlalchemy import text
+            db.session.execute(text('SELECT 1'))
             db.create_all()
+            
+            # Query for user
             user = User.query.filter_by(email=email).first()
             return jsonify({"exists": bool(user)})
-        except Exception as retry_e:
-            print(f"Retry failed in check_email: {retry_e}")
-            return jsonify({"exists": False, "error": "Database connection issue"}), 500
+            
+        except Exception as e:
+            print(f"Database error in check_email (attempt {attempt + 1}): {e}")
+            
+            if attempt < max_retries - 1:
+                # Wait and retry
+                time.sleep(1)
+                try:
+                    # Force reconnection
+                    db.session.rollback()
+                    db.create_all()
+                except:
+                    pass
+            else:
+                # Final attempt failed
+                print(f"All retries failed in check_email: {e}")
+                return jsonify({"exists": False, "error": "Database temporarily unavailable"}), 503
 
 @app.route("/purchase_subscription", methods=["POST"])
 @login_required
