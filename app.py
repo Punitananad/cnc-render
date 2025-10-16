@@ -52,23 +52,17 @@ app.jinja_env.cache = {}
 # Session stability - use stable secret key from env
 app.secret_key = os.getenv('FLASK_SECRET', 'dev-secret-change-this')
 
-# PostgreSQL Database configuration
-if os.getenv('DATABASE_URL'):
-    # Production: Use DATABASE_URL (Render/Heroku style)
-    db_location = os.getenv('DATABASE_URL')
-    if db_location.startswith('postgres://'):
-        db_location = db_location.replace('postgres://', 'postgresql://', 1)
-else:
-    # Development: Build PostgreSQL URL from components
-    DB_HOST = os.getenv('DB_HOST', 'localhost')
-    DB_PORT = os.getenv('DB_PORT', '5432')
-    DB_NAME = os.getenv('DB_NAME', 'calculatentrade')
-    DB_USER = os.getenv('DB_USER', 'postgres')
-    DB_PASSWORD = os.getenv('DB_PASSWORD', 'password')
-    db_location = f'postgresql://{DB_USER}:{DB_PASSWORD}@{DB_HOST}:{DB_PORT}/{DB_NAME}'
+# Database configuration
+from database_config import get_database_url, get_postgres_url
 
-print('\n\n PostgreSQL DB location ====>', db_location, '\n\n')
-app.config["SQLALCHEMY_DATABASE_URI"] = db_location
+# Use PostgreSQL if DATABASE_TYPE is set to 'postgres'
+if os.getenv('DATABASE_TYPE') == 'postgres':
+    app.config["SQLALCHEMY_DATABASE_URI"] = get_postgres_url()
+    print("Using PostgreSQL database")
+else:
+    db_location = os.path.join(os.path.abspath(os.path.dirname(__file__)), 'instance', 'calculatentrade.db')
+    app.config["SQLALCHEMY_DATABASE_URI"] = f"sqlite:///{db_location}"
+    print("Using SQLite database")
 
 
 app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
@@ -87,19 +81,7 @@ if os.getenv('FLASK_ENV') == 'production':
         SESSION_COOKIE_SAMESITE='None'
     )
 
-# Optional: Redis-backed sessions for Docker/multi-worker setups
-if os.getenv('REDIS_URL'):
-    try:
-        import redis
-        from flask_session import Session
-        app.config.update(
-            SESSION_TYPE='redis',
-            SESSION_REDIS=redis.from_url(os.getenv('REDIS_URL', 'redis://redis:6379/0'))
-        )
-        Session(app)
-        app.logger.info("Redis session backend enabled")
-    except ImportError:
-        app.logger.warning("Redis session requested but redis/flask_session not available")
+
 
 db.init_app(app)
 
@@ -117,42 +99,12 @@ def load_user(user_id):
 # Blueprint registration will be done after models are defined
 
 # Database initialization with robust retry logic
-def init_database_with_retry():
-    """Initialize database with comprehensive retry logic for IPv4 access"""
-    max_retries = 10
-    retry_delay = 2
-    
-    for attempt in range(max_retries):
-        try:
-            with app.app_context():
-                # Test database connection first
-                from sqlalchemy import text
-                db.session.execute(text('SELECT 1'))
-                db.session.commit()
-                
-                # Create all tables
-                db.create_all()
-                
-                # Verify tables were created by testing a simple query
-                db.session.execute(text('SELECT 1'))
-                db.session.commit()
-                
-                print(f"PostgreSQL database initialized successfully on attempt {attempt + 1}")
-                return True
-                
-        except Exception as e:
-            print(f"Database init attempt {attempt + 1}/{max_retries} failed: {e}")
-            if attempt < max_retries - 1:
-                print(f"Retrying in {retry_delay} seconds...")
-                time.sleep(retry_delay)
-                retry_delay = min(retry_delay * 1.5, 10)  # Exponential backoff
-            else:
-                print("Failed to initialize database after all retries")
-                return False
-    return False
+# Initialize SQLite database
+with app.app_context():
+    db.create_all()
+    print("SQLite database initialized successfully")
 
-# Initialize database
-init_database_with_retry()
+
 
 try:
     init_admin_db(db)
@@ -254,7 +206,7 @@ def create_flow(state=None):
 # Models
 # ------------------------------------------------------------------------------
 class User(UserMixin, db.Model):
-    __tablename__ = "user"
+    __tablename__ = "users"
     id = db.Column(db.Integer, primary_key=True)
     email = db.Column(db.String(120), unique=True, nullable=False, index=True)
     password_hash = db.Column(db.String(255), nullable=True)  # Allow null for OAuth users
@@ -319,7 +271,7 @@ class EmailVerifyOTP(db.Model):
 class UserSettings(db.Model):
     __tablename__ = "user_settings"
     id = db.Column(db.Integer, primary_key=True)
-    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
     email_notifications = db.Column(db.Boolean, default=True)
     theme = db.Column(db.String(20), default='light')
     timezone = db.Column(db.String(50), default='Asia/Kolkata')
@@ -352,26 +304,26 @@ class BaseTrade(db.Model):
 
 class IntradayTrade(BaseTrade):
     __tablename__ = "intraday_trades"
-    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=True)
     leverage = db.Column(db.Float, nullable=True)
     lot_size = db.Column(db.Integer, nullable=True)
     derivative_name = db.Column(db.String(100), nullable=True)
 
 class DeliveryTrade(BaseTrade):
     __tablename__ = "delivery_trades"
-    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=True)
 
 class SwingTrade(BaseTrade):
     __tablename__ = "swing_trades"
-    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=True)
 
 class MTFTrade(BaseTrade):
     __tablename__ = "mtf_trades"
-    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=True)
 
 class FOTrade(BaseTrade):
     __tablename__ = "fo_trades"
-    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=True)
     strike_price = db.Column(db.Float, nullable=True)
     expiry_date = db.Column(db.Date, nullable=True)
     option_type = db.Column(db.String(10), nullable=True)  # CE/PE
@@ -770,8 +722,17 @@ def password_policy_ok(pw: str) -> bool:
 
 
 def send_email(to: str, subject: str, html: str, body: str = None) -> None:
-    msg = Message(subject=subject, recipients=[to], html=html, body=body)
-    mail.send(msg)
+    try:
+        print(f"[EMAIL] Attempting to send email to: {to}")
+        print(f"[EMAIL] MAIL_USERNAME configured: {app.config.get('MAIL_USERNAME')}")
+        print(f"[EMAIL] MAIL_PASSWORD configured: {'Yes' if app.config.get('MAIL_PASSWORD') else 'No'}")
+        
+        msg = Message(subject=subject, recipients=[to], html=html, body=body)
+        mail.send(msg)
+        print(f"[EMAIL] Successfully sent email to: {to}")
+    except Exception as e:
+        print(f"[EMAIL] Failed to send email to {to}: {str(e)}")
+        raise e
 
 # ----- OTP utils (Reset Password) -----
 def issue_reset_otp(email: str) -> None:
@@ -1059,34 +1020,12 @@ def check_email():
     if not email:
         return jsonify({"exists": False})
     
-    max_retries = 3
-    for attempt in range(max_retries):
-        try:
-            # Ensure database connection and tables exist
-            from sqlalchemy import text
-            db.session.execute(text('SELECT 1'))
-            db.create_all()
-            
-            # Query for user
-            user = User.query.filter_by(email=email).first()
-            return jsonify({"exists": bool(user)})
-            
-        except Exception as e:
-            print(f"Database error in check_email (attempt {attempt + 1}): {e}")
-            
-            if attempt < max_retries - 1:
-                # Wait and retry
-                time.sleep(1)
-                try:
-                    # Force reconnection
-                    db.session.rollback()
-                    db.create_all()
-                except:
-                    pass
-            else:
-                # Final attempt failed
-                print(f"All retries failed in check_email: {e}")
-                return jsonify({"exists": False, "error": "Database temporarily unavailable"}), 503
+    try:
+        user = User.query.filter_by(email=email).first()
+        return jsonify({"exists": bool(user)})
+    except Exception as e:
+        print(f"Database error in check_email: {e}")
+        return jsonify({"exists": False, "error": "Database error"}), 500
 
 @app.route("/purchase_subscription", methods=["POST"])
 @login_required
@@ -2330,7 +2269,7 @@ def pivots_to_ui_percentages(avg_price: float, trade_type: str, levels: dict[str
 class PreviewTemplate(db.Model):
     __tablename__ = "preview_templates"
     id = db.Column(db.Integer, primary_key=True)
-    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
     instrument = db.Column(db.String(50), nullable=False)
     strike = db.Column(db.String(20), nullable=True)
     payload = db.Column(db.JSON, nullable=False)
@@ -2441,7 +2380,7 @@ def delete_template(tid):
 class AIPlanTemplate(db.Model):
     __tablename__ = "ai_plan_templates"
     id = db.Column(db.Integer, primary_key=True)
-    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
     instrument = db.Column(db.String(50), nullable=False)
     strike = db.Column(db.String(20), nullable=True)
     payload = db.Column(db.JSON, nullable=False)
@@ -3915,6 +3854,21 @@ def reopen_fno_position():
 @app.route("/favicon.ico")
 def favicon():
     return send_from_directory(".", "favicon.ico", mimetype="image/vnd.microsoft.icon")
+
+@app.route("/test-email")
+@login_required
+def test_email():
+    """Test email functionality"""
+    try:
+        test_email = current_user.email
+        send_email(
+            to=test_email,
+            subject="Test Email from CalculatenTrade",
+            html="<p>This is a test email. If you receive this, email configuration is working!</p>"
+        )
+        return jsonify({"success": True, "message": f"Test email sent to {test_email}"})
+    except Exception as e:
+        return jsonify({"success": False, "error": str(e)}), 500
 
 # ------------------------------------------------------------------------------
 # Register Blueprints (after all models are defined)

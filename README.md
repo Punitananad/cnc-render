@@ -44,7 +44,7 @@ A comprehensive Flask-based web application for trading calculations, position m
 - **Frontend**: HTML, CSS, JavaScript, Bootstrap
 - **Authentication**: Flask-Login, Google OAuth 2.0
 - **APIs**: Dhan Trading API
-- **Deployment**: Docker, Nginx
+- **Deployment**: Nginx
 
 ## Quick Start
 
@@ -107,17 +107,7 @@ A comprehensive Flask-based web application for trading calculations, position m
 2. Generate API credentials
 3. Add tokens to `.env` file
 
-## Docker Deployment
 
-### Development
-```bash
-docker-compose up --build
-```
-
-### Production
-```bash
-docker-compose -f docker-compose.prod.yml up -d
-```
 
 ## API Endpoints
 
