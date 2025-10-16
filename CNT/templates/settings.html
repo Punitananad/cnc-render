@@ -1,0 +1,239 @@
+{% extends "simple_base.html" %}
+
+{% block title %}Settings - Calculate N Trade{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-12">
+        <h2><i class="fas fa-cog me-2"></i>Account Settings</h2>
+        <p class="text-muted">Manage your account preferences and settings</p>
+    </div>
+</div>
+
+<div class="row">
+    <!-- User Preferences -->
+    <div class="col-md-8">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0"><i class="fas fa-user-cog me-2"></i>User Preferences</h5>
+            </div>
+            <div class="card-body">
+                <form method="POST">
+                    <input type="hidden" name="action" value="update_settings">
+                    
+                    <div class="mb-3">
+                        <label for="email_notifications" class="form-label">
+                            <i class="fas fa-envelope me-2"></i>Email Notifications
+                        </label>
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" id="email_notifications" 
+                                   name="email_notifications" {{ 'checked' if settings.email_notifications }}>
+                            <label class="form-check-label" for="email_notifications">
+                                Receive email notifications for important updates
+                            </label>
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="theme" class="form-label">
+                            <i class="fas fa-palette me-2"></i>Theme
+                        </label>
+                        <select class="form-select" id="theme" name="theme">
+                            <option value="light" {{ 'selected' if settings.theme == 'light' }}>Light</option>
+                            <option value="dark" {{ 'selected' if settings.theme == 'dark' }}>Dark</option>
+                        </select>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="timezone" class="form-label">
+                            <i class="fas fa-clock me-2"></i>Timezone
+                        </label>
+                        <select class="form-select" id="timezone" name="timezone">
+                            <option value="Asia/Kolkata" {{ 'selected' if settings.timezone == 'Asia/Kolkata' }}>Asia/Kolkata (IST)</option>
+                            <option value="America/New_York" {{ 'selected' if settings.timezone == 'America/New_York' }}>America/New_York (EST)</option>
+                            <option value="Europe/London" {{ 'selected' if settings.timezone == 'Europe/London' }}>Europe/London (GMT)</option>
+                            <option value="Asia/Tokyo" {{ 'selected' if settings.timezone == 'Asia/Tokyo' }}>Asia/Tokyo (JST)</option>
+                        </select>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="default_calculator" class="form-label">
+                            <i class="fas fa-calculator me-2"></i>Default Calculator
+                        </label>
+                        <select class="form-select" id="default_calculator" name="default_calculator">
+                            <option value="intraday" {{ 'selected' if settings.default_calculator == 'intraday' }}>Intraday</option>
+                            <option value="delivery" {{ 'selected' if settings.default_calculator == 'delivery' }}>Delivery</option>
+                            <option value="swing" {{ 'selected' if settings.default_calculator == 'swing' }}>Swing</option>
+                            <option value="mtf" {{ 'selected' if settings.default_calculator == 'mtf' }}>MTF</option>
+                            <option value="fo" {{ 'selected' if settings.default_calculator == 'fo' }}>F&O</option>
+                        </select>
+                    </div>
+
+                    <button type="submit" class="btn btn-primary">
+                        <i class="fas fa-save me-2"></i>Save Settings
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Account Information -->
+    <div class="col-md-4">
+        <!-- Quick Access Panel -->
+        <div class="card mb-3">
+            <div class="card-header">
+                <h5 class="mb-0"><i class="fas fa-external-link-alt me-2"></i>Quick Access</h5>
+            </div>
+            <div class="card-body">
+                <div class="d-grid gap-2">
+                    <a href="{{ url_for('mentor.login') }}" class="btn btn-outline-primary">
+                        <i class="fas fa-chalkboard-teacher me-2"></i>Mentor Login
+                    </a>
+                    <a href="{{ url_for('admin.login') }}" class="btn btn-outline-danger">
+                        <i class="fas fa-shield-alt me-2"></i>Admin Login
+                    </a>
+                </div>
+            </div>
+        </div>
+        
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0"><i class="fas fa-info-circle me-2"></i>Account Information</h5>
+            </div>
+            <div class="card-body">
+                <div class="mb-3">
+                    <strong>Email:</strong><br>
+                    <span class="text-muted">{{ current_user.email }}</span>
+                </div>
+                
+                <div class="mb-3">
+                    <strong>Member Since:</strong><br>
+                    <span class="text-muted">{{ current_user.registered_on.strftime('%B %d, %Y') }}</span>
+                </div>
+                
+                <div class="mb-3">
+                    <strong>Account Type:</strong><br>
+                    {% if current_user.google_id %}
+                        <span class="badge bg-info">Google Account</span>
+                    {% else %}
+                        <span class="badge bg-primary">Email Account</span>
+                    {% endif %}
+                </div>
+                
+                <div class="mb-3">
+                    <strong>Subscription:</strong><br>
+                    {% if current_user.has_active_subscription() %}
+                        <span class="badge bg-success">Premium Active</span><br>
+                        <small class="text-muted">
+                            {% if current_user.subscription_expires %}
+                                Expires: {{ current_user.subscription_expires.strftime('%B %d, %Y') }}
+                            {% else %}
+                                Lifetime Access
+                            {% endif %}
+                        </small>
+                    {% else %}
+                        <span class="badge bg-warning">Free Plan</span><br>
+                        <small><a href="{{ url_for('subscription') }}" class="text-decoration-none">Upgrade to Premium</a></small>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Danger Zone -->
+<div class="row mt-4">
+    <div class="col-12">
+        <div class="card border-danger">
+            <div class="card-header bg-danger text-white">
+                <h5 class="mb-0"><i class="fas fa-exclamation-triangle me-2"></i>Danger Zone</h5>
+            </div>
+            <div class="card-body">
+                <div class="alert alert-danger">
+                    <h6><i class="fas fa-warning me-2"></i>Delete Account</h6>
+                    <p class="mb-0">
+                        Permanently delete your account and all associated data. This action cannot be undone.
+                        All your trades, settings, and personal information will be permanently removed.
+                    </p>
+                </div>
+                
+                <button type="button" class="btn btn-danger" data-bs-toggle="modal" data-bs-target="#deleteAccountModal">
+                    <i class="fas fa-trash me-2"></i>Delete My Account
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Delete Account Modal -->
+<div class="modal fade" id="deleteAccountModal" tabindex="-1" aria-labelledby="deleteAccountModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header bg-danger text-white">
+                <h5 class="modal-title" id="deleteAccountModalLabel">
+                    <i class="fas fa-exclamation-triangle me-2"></i>Confirm Account Deletion
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <form method="POST" action="{{ url_for('delete_account') }}">
+                <div class="modal-body">
+                    <div class="alert alert-warning">
+                        <strong>Warning:</strong> This action is irreversible. All your data will be permanently deleted:
+                        <ul class="mt-2 mb-0">
+                            <li>All saved trades and calculations</li>
+                            <li>Account settings and preferences</li>
+                            <li>Subscription information</li>
+                            <li>Personal profile data</li>
+                        </ul>
+                    </div>
+                    
+                    {% if current_user.password_hash %}
+                    <div class="mb-3">
+                        <label for="password" class="form-label">Enter your password to confirm:</label>
+                        <input type="password" class="form-control" id="password" name="password" required>
+                    </div>
+                    {% endif %}
+                    
+                    <div class="mb-3">
+                        <label for="confirm_text" class="form-label">
+                            Type <strong>DELETE MY ACCOUNT</strong> to confirm:
+                        </label>
+                        <input type="text" class="form-control" id="confirm_text" name="confirm_text" 
+                               placeholder="DELETE MY ACCOUNT" required>
+                    </div>
+                    
+                    <div class="form-check">
+                        <input class="form-check-input" type="checkbox" id="understand_deletion" required>
+                        <label class="form-check-label" for="understand_deletion">
+                            I understand that this action cannot be undone and all my data will be permanently deleted.
+                        </label>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-danger" id="confirmDeleteBtn" disabled>
+                        <i class="fas fa-trash me-2"></i>Delete My Account
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const confirmText = document.getElementById('confirm_text');
+    const understandCheck = document.getElementById('understand_deletion');
+    const deleteBtn = document.getElementById('confirmDeleteBtn');
+    
+    function checkForm() {
+        const textCorrect = confirmText.value === 'DELETE MY ACCOUNT';
+        const checkboxChecked = understandCheck.checked;
+        deleteBtn.disabled = !(textCorrect && checkboxChecked);
+    }
+    
+    confirmText.addEventListener('input', checkForm);
+    understandCheck.addEventListener('change', checkForm);
+});
+</script>
+{% endblock %}

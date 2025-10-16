@@ -1,0 +1,204 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}Trading Journal{% endblock %}</title>
+    
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <!-- Custom CSS -->
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/gentelella-theme.css') }}">
+    
+    <style>
+        /* Fixed: Ensure sidebar and main content work together */
+        .main-container {
+            display: flex;
+            min-height: 100vh;
+        }
+        
+        .sidebar {
+            width: 230px;
+            background: #2A3F54;
+            position: fixed;
+            height: 100vh;
+            left: 0;
+            top: 0;
+            z-index: 1000;
+            transition: all 0.3s ease;
+        }
+        
+        .main-content {
+            margin-left: 230px;
+            flex: 1;
+            background: #f8f9fa;
+            min-height: 100vh;
+            transition: all 0.3s ease;
+        }
+        
+        .top-nav {
+            background: #fff;
+            border-bottom: 1px solid #e0e0e0;
+            padding: 15px 20px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        
+        /* Mobile responsive */
+        @media (max-width: 768px) {
+            .sidebar {
+                left: -230px;
+            }
+            
+            .sidebar.active {
+                left: 0;
+            }
+            
+            .main-content {
+                margin-left: 0;
+            }
+        }
+    </style>
+    
+    {% block extra_css %}{% endblock %}
+</head>
+<body class="nav-md">
+    <div class="main-container">
+        <!-- Sidebar -->
+        <div class="sidebar" id="sidebar">
+            <div class="nav_title">
+                <a href="{{ url_for('calculatentrade.dashboard') }}" class="site_title">
+                    <i class="fas fa-chart-line"></i> <span>Trading Journal</span>
+                </a>
+            </div>
+            
+            <!-- Profile section -->
+            <div class="profile clearfix">
+                <div class="profile_pic">
+                    <img src="{{ url_for('static', filename='default-male.png') }}" alt="Profile" class="img-circle profile_img">
+                </div>
+                <div class="profile_info">
+                    <span>Welcome,</span>
+                    <h2>{{ current_user.email.split('@')[0] if current_user.is_authenticated else 'User' }}</h2>
+                </div>
+            </div>
+            
+            <!-- Menu -->
+            <div class="main_menu_side">
+                <div class="menu_section">
+                    <h3>General</h3>
+                    <ul class="nav side-menu">
+                        <li><a href="{{ url_for('calculatentrade.dashboard') }}"><i class="fas fa-tachometer-alt"></i> Dashboard</a></li>
+                        <li><a href="{{ url_for('calculatentrade.get_trades') }}"><i class="fas fa-exchange-alt"></i> Trades</a></li>
+                        <li><a href="{{ url_for('calculatentrade.get_strategies') }}"><i class="fas fa-chess-board"></i> Strategies</a></li>
+                        <li><a href="{{ url_for('calculatentrade.get_rules') }}"><i class="fas fa-gavel"></i> Rules</a></li>
+                        <li><a href="{{ url_for('calculatentrade.get_mistakes') }}"><i class="fas fa-exclamation-triangle"></i> Mistakes</a></li>
+                        <li><a href="{{ url_for('calculatentrade.ai_summaries') }}"><i class="fas fa-robot"></i> AI Assistant</a></li>
+                        <li><a href="{{ url_for('calculatentrade.get_reports') }}"><i class="fas fa-chart-bar"></i> Reports</a></li>
+                    </ul>
+                </div>
+                
+                <div class="menu_section">
+                    <h3>Tools</h3>
+                    <ul class="nav side-menu">
+                        <li><a href="{{ url_for('calculatentrade.connect_broker') }}"><i class="fas fa-plug"></i> Broker Connection</a></li>
+                        <li><a href="{{ url_for('calculatentrade.settings') }}"><i class="fas fa-cog"></i> Settings</a></li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Main content -->
+        <div class="main-content">
+            <!-- Top navigation -->
+            <div class="top-nav">
+                <div class="nav toggle">
+                    <a id="menu_toggle" class="menu_toggle"><i class="fas fa-bars"></i></a>
+                </div>
+                
+                <div class="nav navbar-nav navbar-right" style="float: right;">
+                    <ul class="nav navbar-nav">
+                        {% if current_user.is_authenticated %}
+                        <li class="dropdown">
+                            <a href="#" class="dropdown-toggle" data-toggle="dropdown">
+                                <i class="fas fa-user"></i> {{ current_user.email.split('@')[0] }}
+                                <span class="caret"></span>
+                            </a>
+                            <ul class="dropdown-menu dropdown-usermenu">
+                                <li><a href="{{ url_for('calculatentrade.settings') }}"><i class="fas fa-cog"></i> Settings</a></li>
+                                <li><a href="{{ url_for('logout') }}"><i class="fas fa-sign-out-alt"></i> Logout</a></li>
+                            </ul>
+                        </li>
+                        {% endif %}
+                    </ul>
+                </div>
+            </div>
+            
+            <!-- Flash messages -->
+            {% with messages = get_flashed_messages(with_categories=true) %}
+                {% if messages %}
+                    <div class="container mx-auto px-4 py-2">
+                        {% for category, message in messages %}
+                            <div class="alert alert-{{ 'danger' if category == 'error' else category }} alert-dismissible fade show" role="alert">
+                                {{ message }}
+                                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                            </div>
+                        {% endfor %}
+                    </div>
+                {% endif %}
+            {% endwith %}
+            
+            <!-- Page content -->
+            {% block content %}{% endblock %}
+        </div>
+    </div>
+    
+    <!-- Scripts -->
+    <script src="https://code.jquery.com/jquery-3.7.0.min.js"></script>
+    <script src="{{ url_for('static', filename='js/gentelella.js') }}"></script>
+    
+    <script>
+        // Fixed: Sidebar toggle functionality
+        document.addEventListener('DOMContentLoaded', function() {
+            const menuToggle = document.getElementById('menu_toggle');
+            const sidebar = document.getElementById('sidebar');
+            const mainContent = document.querySelector('.main-content');
+            
+            if (menuToggle) {
+                menuToggle.addEventListener('click', function(e) {
+                    e.preventDefault();
+                    
+                    if (window.innerWidth <= 768) {
+                        // Mobile: slide sidebar in/out
+                        sidebar.classList.toggle('active');
+                    } else {
+                        // Desktop: collapse/expand
+                        if (sidebar.style.width === '60px') {
+                            sidebar.style.width = '230px';
+                            mainContent.style.marginLeft = '230px';
+                        } else {
+                            sidebar.style.width = '60px';
+                            mainContent.style.marginLeft = '60px';
+                        }
+                    }
+                });
+            }
+            
+            // Close mobile sidebar when clicking outside
+            document.addEventListener('click', function(e) {
+                if (window.innerWidth <= 768 && 
+                    !sidebar.contains(e.target) && 
+                    !menuToggle.contains(e.target) && 
+                    sidebar.classList.contains('active')) {
+                    sidebar.classList.remove('active');
+                }
+            });
+        });
+    </script>
+    
+    {% block extra_js %}{% endblock %}
+</body>
+</html>

@@ -1,0 +1,412 @@
+{% extends "base_new_journal.html" %}
+
+{% block title %}Trading Assistant | Calculate N Trade{% endblock %}
+
+{% block extra_head %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+{% endblock %}
+
+{% block content %}
+<div class="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+  <!-- Header -->
+  <div class="flex justify-between items-center mb-6">
+    <div>
+      <h1 class="text-2xl font-bold text-gray-800 dark:text-white">AI Trading Assistant</h1>
+      <p class="text-gray-500 dark:text-gray-400">Get insights, analysis, and advice on your trading performance</p>
+    </div>
+    <button id="exportChatBtn" class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition">
+      <i class="fas fa-download mr-2"></i>Export Chat
+    </button>
+  </div>
+
+  <div class="grid grid-cols-1 lg:grid-cols-4 gap-6">
+    <!-- Quick Actions Sidebar -->
+    <div class="lg:col-span-1">
+      <div class="bg-white dark:bg-gray-800 rounded-xl shadow p-4 mb-4">
+        <h3 class="text-lg font-semibold mb-4">Quick Questions</h3>
+        <div class="space-y-2">
+          <button class="quick-prompt w-full text-left px-3 py-2 bg-gray-50 dark:bg-gray-700 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-600 transition text-sm" 
+                  data-prompt="Summarize my last 30 days trading performance">
+            <i class="fas fa-chart-line mr-2 text-blue-500"></i>
+            Summarize last 30 days
+          </button>
+          
+          <button class="quick-prompt w-full text-left px-3 py-2 bg-gray-50 dark:bg-gray-700 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-600 transition text-sm" 
+                  data-prompt="What is my best performing symbol?">
+            <i class="fas fa-trophy mr-2 text-yellow-500"></i>
+            Best performing symbol
+          </button>
+          
+          <button class="quick-prompt w-full text-left px-3 py-2 bg-gray-50 dark:bg-gray-700 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-600 transition text-sm" 
+                  data-prompt="Show me equity curve insights">
+            <i class="fas fa-chart-area mr-2 text-green-500"></i>
+            Equity curve insight
+          </button>
+          
+          <button class="quick-prompt w-full text-left px-3 py-2 bg-gray-50 dark:bg-gray-700 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-600 transition text-sm" 
+                  data-prompt="Analyze my risk-to-reward ratio">
+            <i class="fas fa-balance-scale mr-2 text-purple-500"></i>
+            Risk-to-Reward analysis
+          </button>
+          
+          <button class="quick-prompt w-full text-left px-3 py-2 bg-gray-50 dark:bg-gray-700 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-600 transition text-sm" 
+                  data-prompt="Give me trading advice to improve">
+            <i class="fas fa-lightbulb mr-2 text-orange-500"></i>
+            Trading advice
+          </button>
+          
+          <button class="quick-prompt w-full text-left px-3 py-2 bg-gray-50 dark:bg-gray-700 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-600 transition text-sm" 
+                  data-prompt="How are my challenges progressing?">
+            <i class="fas fa-target mr-2 text-red-500"></i>
+            Challenge progress
+          </button>
+        </div>
+      </div>
+
+      <!-- AI Status -->
+      <div class="bg-white dark:bg-gray-800 rounded-xl shadow p-4">
+        <h3 class="text-lg font-semibold mb-2">AI Status</h3>
+        <div class="flex items-center text-sm">
+          <div class="w-3 h-3 bg-green-500 rounded-full mr-2 animate-pulse"></div>
+          <span class="text-green-600">Online & Ready</span>
+        </div>
+        <p class="text-xs text-gray-500 mt-2">Ask me anything about your trading performance!</p>
+      </div>
+    </div>
+
+    <!-- Chat Interface -->
+    <div class="lg:col-span-3">
+      <div class="bg-white dark:bg-gray-800 rounded-xl shadow flex flex-col h-[600px]">
+        <!-- Chat Header -->
+        <div class="flex items-center justify-between p-4 border-b border-gray-200 dark:border-gray-700">
+          <div class="flex items-center">
+            <div class="w-10 h-10 bg-blue-600 rounded-full flex items-center justify-center mr-3">
+              <i class="fas fa-robot text-white"></i>
+            </div>
+            <div>
+              <h3 class="font-semibold">Trading Assistant</h3>
+              <p class="text-xs text-gray-500">AI-powered trading insights</p>
+            </div>
+          </div>
+          <button id="clearChatBtn" class="px-3 py-1 text-sm bg-gray-100 dark:bg-gray-700 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-600 transition">
+            <i class="fas fa-trash mr-1"></i>Clear
+          </button>
+        </div>
+
+        <!-- Chat Messages -->
+        <div id="chatMessages" class="flex-1 overflow-y-auto p-4 space-y-4">
+          <!-- Welcome Message -->
+          <div class="flex items-start">
+            <div class="w-8 h-8 bg-blue-600 rounded-full flex items-center justify-center mr-3 flex-shrink-0">
+              <i class="fas fa-robot text-white text-sm"></i>
+            </div>
+            <div class="bg-gray-100 dark:bg-gray-700 rounded-lg p-3 max-w-md">
+              <p class="text-sm">👋 Hello! I'm your AI trading assistant. I can help you analyze your performance, identify patterns, and provide personalized advice. What would you like to know about your trading?</p>
+            </div>
+          </div>
+        </div>
+
+        <!-- Chat Input -->
+        <div class="p-4 border-t border-gray-200 dark:border-gray-700">
+          <div class="flex space-x-2">
+            <input type="text" id="chatInput" placeholder="Ask me about your trading performance..." 
+                   class="flex-1 px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-700 dark:text-white">
+            <button id="sendBtn" class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition disabled:opacity-50 disabled:cursor-not-allowed">
+              <i class="fas fa-paper-plane"></i>
+            </button>
+          </div>
+          <div class="flex items-center mt-2 text-xs text-gray-500">
+            <i class="fas fa-info-circle mr-1"></i>
+            <span>Press Enter to send • Try asking about summaries, symbols, or advice</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Loading Modal -->
+<div id="loadingModal" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+  <div class="bg-white dark:bg-gray-800 rounded-lg p-6 flex items-center">
+    <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mr-3"></div>
+    <span>AI is thinking...</span>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+  const chatMessages = document.getElementById('chatMessages');
+  const chatInput = document.getElementById('chatInput');
+  const sendBtn = document.getElementById('sendBtn');
+  const loadingModal = document.getElementById('loadingModal');
+  let messageId = 0;
+
+  // Event listeners
+  sendBtn.addEventListener('click', sendMessage);
+  chatInput.addEventListener('keypress', (e) => {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault();
+      sendMessage();
+    }
+  });
+
+  document.getElementById('clearChatBtn').addEventListener('click', clearChat);
+  document.getElementById('exportChatBtn').addEventListener('click', exportChat);
+
+  // Quick prompt buttons
+  document.querySelectorAll('.quick-prompt').forEach(btn => {
+    btn.addEventListener('click', () => {
+      chatInput.value = btn.dataset.prompt;
+      sendMessage();
+    });
+  });
+
+  async function sendMessage() {
+    const message = chatInput.value.trim();
+    if (!message) return;
+
+    // Add user message to chat
+    addMessage(message, 'user');
+    chatInput.value = '';
+    sendBtn.disabled = true;
+    
+    // Show loading
+    showLoading();
+
+    try {
+      const response = await fetch('/calculatentrade_journal/api/ai_chat', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ message: message })
+      });
+
+      const data = await response.json();
+      
+      if (response.ok) {
+        // Add bot response
+        addMessage(data.reply, 'bot', data);
+      } else {
+        addMessage('Sorry, I encountered an error. Please try again.', 'bot');
+      }
+    } catch (error) {
+      console.error('Chat error:', error);
+      addMessage('Sorry, I\'m having trouble connecting. Please try again.', 'bot');
+    } finally {
+      hideLoading();
+      sendBtn.disabled = false;
+      chatInput.focus();
+    }
+  }
+
+  function addMessage(content, sender, data = null) {
+    messageId++;
+    const messageDiv = document.createElement('div');
+    messageDiv.className = 'flex items-start';
+    messageDiv.id = `message-${messageId}`;
+
+    if (sender === 'user') {
+      messageDiv.innerHTML = `
+        <div class="flex-1"></div>
+        <div class="bg-blue-600 text-white rounded-lg p-3 max-w-md ml-auto">
+          <p class="text-sm">${escapeHtml(content)}</p>
+        </div>
+        <div class="w-8 h-8 bg-blue-600 rounded-full flex items-center justify-center ml-3 flex-shrink-0">
+          <i class="fas fa-user text-white text-sm"></i>
+        </div>
+      `;
+    } else {
+      messageDiv.innerHTML = `
+        <div class="w-8 h-8 bg-blue-600 rounded-full flex items-center justify-center mr-3 flex-shrink-0">
+          <i class="fas fa-robot text-white text-sm"></i>
+        </div>
+        <div class="bg-gray-100 dark:bg-gray-700 rounded-lg p-3 max-w-2xl">
+          <div class="text-sm whitespace-pre-line">${formatBotMessage(content)}</div>
+          ${data && data.chart_type ? createChart(data) : ''}
+        </div>
+      `;
+    }
+
+    chatMessages.appendChild(messageDiv);
+    chatMessages.scrollTop = chatMessages.scrollHeight;
+
+    // Add typing animation for bot messages
+    if (sender === 'bot') {
+      messageDiv.classList.add('animate-fade-in');
+    }
+  }
+
+  function formatBotMessage(content) {
+    // Convert markdown-like formatting to HTML
+    return content
+      .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+      .replace(/\*(.*?)\*/g, '<em>$1</em>')
+      .replace(/•/g, '•')
+      .replace(/(\d+)\./g, '<strong>$1.</strong>')
+      .replace(/(₹[\d,]+\.?\d*)/g, '<span class="font-mono">$1</span>')
+      .replace(/(\d+\.?\d*%)/g, '<span class="font-mono text-blue-600">$1</span>');
+  }
+
+  function createChart(data) {
+    if (!data.chart_type || !data.data) return '';
+
+    const chartId = `chart-${messageId}`;
+    let chartHtml = `<div class="mt-3 p-3 bg-white dark:bg-gray-800 rounded border">`;
+
+    switch (data.chart_type) {
+      case 'summary':
+        chartHtml += `
+          <div class="grid grid-cols-3 gap-4 text-center">
+            <div>
+              <div class="text-2xl font-bold ${data.data.color === 'success' ? 'text-green-600' : 'text-red-600'}">
+                ₹${data.data.pnl.toLocaleString()}
+              </div>
+              <div class="text-xs text-gray-500">Total P&L</div>
+            </div>
+            <div>
+              <div class="text-2xl font-bold text-blue-600">${data.data.trades}</div>
+              <div class="text-xs text-gray-500">Trades</div>
+            </div>
+            <div>
+              <div class="text-2xl font-bold text-purple-600">${data.data.win_rate.toFixed(1)}%</div>
+              <div class="text-xs text-gray-500">Win Rate</div>
+            </div>
+          </div>
+        `;
+        break;
+
+      case 'symbols':
+        chartHtml += `
+          <div class="space-y-2">
+            <div class="flex justify-between items-center p-2 bg-green-50 rounded">
+              <span class="font-medium">${data.data.best.symbol}</span>
+              <span class="text-green-600 font-bold">₹${data.data.best.pnl.toLocaleString()}</span>
+            </div>
+            ${data.data.worst ? `
+              <div class="flex justify-between items-center p-2 bg-red-50 rounded">
+                <span class="font-medium">${data.data.worst.symbol}</span>
+                <span class="text-red-600 font-bold">₹${data.data.worst.pnl.toLocaleString()}</span>
+              </div>
+            ` : ''}
+          </div>
+        `;
+        break;
+
+      case 'risk_reward':
+        const ratio = typeof data.data.ratio === 'string' ? data.data.ratio : `1:${data.data.ratio.toFixed(2)}`;
+        chartHtml += `
+          <div class="grid grid-cols-2 gap-4 text-center">
+            <div>
+              <div class="text-lg font-bold text-green-600">₹${data.data.avg_win.toLocaleString()}</div>
+              <div class="text-xs text-gray-500">Avg Win</div>
+            </div>
+            <div>
+              <div class="text-lg font-bold text-red-600">₹${data.data.avg_loss.toLocaleString()}</div>
+              <div class="text-xs text-gray-500">Avg Loss</div>
+            </div>
+          </div>
+          <div class="mt-3 text-center">
+            <div class="text-xl font-bold text-blue-600">${ratio}</div>
+            <div class="text-xs text-gray-500">Risk:Reward Ratio</div>
+          </div>
+        `;
+        break;
+
+      default:
+        return '';
+    }
+
+    chartHtml += '</div>';
+    return chartHtml;
+  }
+
+  function showLoading() {
+    loadingModal.classList.remove('hidden');
+  }
+
+  function hideLoading() {
+    loadingModal.classList.add('hidden');
+  }
+
+  function clearChat() {
+    if (confirm('Are you sure you want to clear the chat history?')) {
+      chatMessages.innerHTML = `
+        <div class="flex items-start">
+          <div class="w-8 h-8 bg-blue-600 rounded-full flex items-center justify-center mr-3 flex-shrink-0">
+            <i class="fas fa-robot text-white text-sm"></i>
+          </div>
+          <div class="bg-gray-100 dark:bg-gray-700 rounded-lg p-3 max-w-md">
+            <p class="text-sm">👋 Hello! I'm your AI trading assistant. I can help you analyze your performance, identify patterns, and provide personalized advice. What would you like to know about your trading?</p>
+          </div>
+        </div>
+      `;
+      messageId = 0;
+    }
+  }
+
+  function exportChat() {
+    const messages = Array.from(chatMessages.children);
+    let chatText = 'Trading Assistant Chat Export\n';
+    chatText += '='.repeat(40) + '\n\n';
+
+    messages.forEach((msg, index) => {
+      const isBot = msg.querySelector('.fa-robot');
+      const content = msg.querySelector('.text-sm, .whitespace-pre-line');
+      
+      if (content) {
+        const sender = isBot ? 'AI Assistant' : 'You';
+        const text = content.textContent.trim();
+        chatText += `${sender}: ${text}\n\n`;
+      }
+    });
+
+    // Create and download file
+    const blob = new Blob([chatText], { type: 'text/plain' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `trading-chat-${new Date().toISOString().split('T')[0]}.txt`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  }
+
+  function escapeHtml(text) {
+    const div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
+  }
+
+  // Add CSS for animations
+  const style = document.createElement('style');
+  style.textContent = `
+    .animate-fade-in {
+      animation: fadeIn 0.5s ease-in;
+    }
+    
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(10px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+    
+    .animate-pulse {
+      animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+    }
+    
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: .5; }
+    }
+  `;
+  document.head.appendChild(style);
+
+  // Focus on input
+  chatInput.focus();
+});
+</script>
+{% endblock %}

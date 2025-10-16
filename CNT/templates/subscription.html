@@ -1,0 +1,110 @@
+{% extends "simple_base.html" %}
+
+{% block title %}Subscription - CalculatenTrade{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="row justify-content-center">
+        <div class="col-md-10">
+            <div class="text-center mb-5">
+                <h1 class="display-5">Subscription Management</h1>
+                {% if user and user.has_active_subscription() %}
+                <div class="alert alert-success">
+                    <h5>✓ Premium Active</h5>
+                    <p class="mb-0">Your {{ user.subscription_type }} subscription is active until {{ user.subscription_expires.strftime('%B %d, %Y') if user.subscription_expires else 'Lifetime' }}</p>
+                </div>
+                {% else %}
+                <p class="lead text-muted">Choose a plan to unlock all premium features</p>
+                {% endif %}
+            </div>
+
+            {% if not user or not user.has_active_subscription() %}
+            <div class="row g-4">
+                <!-- Monthly Plan -->
+                <div class="col-md-6">
+                    <div class="card h-100 border-primary">
+                        <div class="card-header bg-primary text-white text-center">
+                            <h4>Monthly Plan</h4>
+                        </div>
+                        <div class="card-body text-center">
+                            <div class="display-4 text-primary mb-3">₹250<small class="fs-6 text-muted">/month</small></div>
+                            
+                            <ul class="list-unstyled mb-4">
+                                <li class="mb-2">✓ All Trading Calculators</li>
+                                <li class="mb-2">✓ Position Management</li>
+                                <li class="mb-2">✓ Trade Journal</li>
+                                <li class="mb-2">✓ Risk Analysis</li>
+                                <li class="mb-2">✓ Real-time Data</li>
+                                <li class="mb-2">✓ Email Support</li>
+                            </ul>
+                            
+                            <form method="POST" action="{{ url_for('purchase_subscription') }}">
+                                <input type="hidden" name="plan_type" value="monthly">
+                                <button type="submit" class="btn btn-primary btn-lg w-100">
+                                    Subscribe Monthly
+                                </button>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Yearly Plan -->
+                <div class="col-md-6">
+                    <div class="card h-100 border-success position-relative">
+                        <div class="badge bg-success position-absolute top-0 start-50 translate-middle px-3 py-2">
+                            BEST VALUE
+                        </div>
+                        <div class="card-header bg-success text-white text-center">
+                            <h4>Yearly Plan</h4>
+                        </div>
+                        <div class="card-body text-center">
+                            <div class="display-4 text-success mb-3">₹2,700<small class="fs-6 text-muted">/year</small></div>
+                            <p class="text-success mb-3"><strong>Save ₹300!</strong> (₹225/month)</p>
+                            
+                            <ul class="list-unstyled mb-4">
+                                <li class="mb-2">✓ All Trading Calculators</li>
+                                <li class="mb-2">✓ Position Management</li>
+                                <li class="mb-2">✓ Trade Journal</li>
+                                <li class="mb-2">✓ Risk Analysis</li>
+                                <li class="mb-2">✓ Real-time Data</li>
+                                <li class="mb-2">✓ Priority Support</li>
+                                <li class="mb-2">✓ Advanced Analytics</li>
+                                <li class="mb-2">✓ Custom Strategies</li>
+                            </ul>
+                            
+                            <form method="POST" action="{{ url_for('purchase_subscription') }}">
+                                <input type="hidden" name="plan_type" value="yearly">
+                                <button type="submit" class="btn btn-success btn-lg w-100">
+                                    Subscribe Yearly
+                                </button>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            {% else %}
+            <div class="row justify-content-center">
+                <div class="col-md-6">
+                    <div class="card">
+                        <div class="card-body text-center">
+                            <h5>Manage Subscription</h5>
+                            <p>Your subscription will automatically renew on {{ user.subscription_expires.strftime('%B %d, %Y') if user.subscription_expires else 'N/A' }}</p>
+                            <a href="{{ url_for('home') }}" class="btn btn-primary">Continue Using Premium</a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+
+            <div class="text-center mt-5">
+                <p class="text-muted">
+                    <small>
+                        By subscribing, you agree to our 
+                        <a href="{{ url_for('terms') }}" target="_blank">Terms and Conditions</a>
+                    </small>
+                </p>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

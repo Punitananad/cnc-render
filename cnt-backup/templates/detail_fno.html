@@ -1,0 +1,1873 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>AI F&O Position Manager</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"/>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <style>
+    *{margin:0;padding:0;box-sizing:border-box;font-family:'Segoe UI',Tahoma,Geneva,Verdana,sans-serif}
+    body{background:linear-gradient(135deg,#0a0e21,#1a2a6c,#2d1a6c);color:#f0f0f0;min-height:100vh;padding:20px}
+    .container{max-width:1400px;margin:0 auto}
+    header{display:flex;justify-content:space-between;align-items:center;padding:20px;background:rgba(255,255,255,.1);border-radius:10px;box-shadow:0 4px 15px rgba(0,0,0,.3);margin-bottom:20px;backdrop-filter:blur(10px);border:1px solid rgba(255,255,255,.1)}
+    .stock-info{display:flex;align-items:center}
+    .stock-icon{width:50px;height:50px;background:linear-gradient(135deg,#4e54c8,#8f94fb);color:#fff;border-radius:50%;display:flex;align-items:center;justify-content:center;margin-right:15px;font-size:24px}
+    .stock-details h1{color:#fff;font-size:28px}
+    .stock-details p{color:#aaa}
+    .live-price{text-align:right}
+    .price{font-size:32px;font-weight:700;color:#fff}
+    .change{font-size:18px;font-weight:700}
+    .positive{color:#4cd964}.negative{color:#ff3b30}
+    .dashboard{display:grid;grid-template-columns:1fr 1fr;gap:20px;margin-bottom:20px}
+    .card{background:rgba(255,255,255,.1);border-radius:10px;padding:20px;box-shadow:0 4px 15px rgba(0,0,0,.3);backdrop-filter:blur(10px);border:1px solid rgba(255,255,255,.1);transition:all 0.3s ease}
+    .card h2{color:#fff;margin-bottom:15px;padding-bottom:10px;border-bottom:2px solid rgba(255,255,255,.2);display:flex;align-items:center;gap:10px}
+
+    .stats{display:grid;gap:15px;text-align:center}
+    .stat-item{padding:15px;background:rgba(255,255,255,.1);border-radius:8px}
+    .stat-value{font-size:24px;font-weight:700;color:#fff}
+    .stat-label{font-size:14px;color:#aaa}
+
+    .actions{display:flex;gap:10px;justify-content:center}
+    button{background:linear-gradient(135deg,#4e54c8,#8f94fb);color:#fff;border:none;padding:12px 20px;border-radius:5px;cursor:pointer;font-size:16px;font-weight:600;transition:all 0.3s ease}
+    button:hover{background:linear-gradient(135deg,#3a3f99,#6f73d9);transform:translateY(-2px);box-shadow:0 4px 8px rgba(0,0,0,.3)}
+    .btn-sell{background:linear-gradient(135deg,#ff416c,#ff4b2b)}.btn-sell:hover{background:linear-gradient(135deg,#e73c64,#e64527)}
+    .btn-back{background:linear-gradient(135deg,#6a11cb,#2575fc)}.btn-back:hover{background:linear-gradient(135deg,#5a0db9,#1f67e6)}
+
+    .form-row{display:grid;grid-template-columns:1fr 1fr;gap:15px;margin-bottom:16px}
+    .form-group{background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.1);border-radius:8px;padding:12px}
+    .form-group label{display:block;font-weight:600;color:#ddd;margin-bottom:6px}
+    .form-group input[type="number"],.form-group input[type="text"]{width:100%;padding:12px;border:1px solid rgba(255,255,255,.2);border-radius:8px;background:rgba(0,0,0,.2);color:#fff}
+
+    .trade-badge{font-weight:700;padding:8px 12px;border-radius:999px;display:inline-block}
+    .badge-buy{background:rgba(76,217,100,.2);color:#4cd964;border:1px solid rgba(76,217,100,.3)}
+    .badge-sell{background:rgba(255,59,48,.2);color:#ff3b30;border:1px solid rgba(255,59,48,.3)}
+
+    .tiles{grid-template-columns:repeat(4,1fr)}
+    @media (max-width:900px){ .tiles{grid-template-columns:repeat(2,1fr)} }
+    @media (max-width:520px){ .tiles{grid-template-columns:1fr} }
+
+    /* F&O Specific Styles */
+    .lot-info{background:rgba(0,255,136,0.1);padding:15px;border-radius:8px;margin-bottom:20px;border:1px solid rgba(0,255,136,0.3)}
+    .lot-info h3{color:#00ff88;margin:0 0 15px 0}
+    .lot-stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:15px}
+    .lot-stat{text-align:center}
+    .lot-stat-value{font-size:1.2rem;font-weight:700;color:#fff;margin-bottom:5px}
+    .lot-stat-label{font-size:11px;color:#aaa;text-transform:uppercase}
+    .no-leverage-badge{padding:4px 8px;background:#e6f0ff;color:#0050cc;border-radius:9999px;font-weight:600;font-size:12px;margin-left:8px}
+
+    footer {text-align: center; margin-top: 20px; color: #aaa; font-size: 14px;}
+    
+    /* AI Mode */
+    .ai-grid{display:grid;grid-template-columns:1.1fr .9fr;gap:12px}
+    @media (max-width:900px){.ai-grid{grid-template-columns:1fr}}
+    .ai-console{max-height:180px;overflow:auto;background:rgba(15,22,38,.8);color:#e6eeff;border:1px solid rgba(229,231,235,.2);border-radius:10px;padding:10px;font-family:ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;font-size:12px}
+    .ai-bar{display:flex;align-items:center;gap:8px;padding:10px;margin-top:8px;background:rgba(238,242,255,.1);border-radius:10px;border:1px dashed rgba(203,213,255,.3)}
+    .dot{width:8px;height:8px;border-radius:50%;background:#4e54c8;animation:pulse 1.6s infinite}
+    @keyframes pulse{0%{opacity:.2}50%{opacity:1}100%{opacity:.2}}
+    table{width:100%;border-collapse:collapse}
+    th,td{padding:10px;border-bottom:1px solid rgba(255,255,255,.1);text-align:left}
+    th{background:rgba(255,255,255,.1);color:#fff}
+    .pill{padding:6px 10px;border-radius:999px;font-size:12px;display:inline-block}
+    .pill.good{background:rgba(233,249,241,.2);color:#4cd964;border:1px solid rgba(185,240,212,.3)}
+    .pill.warn{background:rgba(255,247,214,.2);color:#ffcc00;border:1px solid rgba(255,232,161,.3)}
+    
+    /* AI Simulation Controls */
+    .simulation-controls {display: flex; gap: 10px; margin-top: 10px;}
+    .ai-pulse {position: relative;}
+    .ai-pulse::after {content: ''; position: absolute; top: -5px; left: -5px; right: -5px; bottom: -5px; background: rgba(78, 84, 200, 0.3); border-radius: 50%; animation: pulse-ring 1.5s infinite;}
+    @keyframes pulse-ring {0% {transform: scale(0.8); opacity: 1;} 100% {transform: scale(2); opacity: 0;}}
+    
+    /* AI Thinking Animation */
+    .fa-brain {
+      animation: brain-pulse 1.5s ease-in-out infinite;
+    }
+    @keyframes brain-pulse {
+      0%, 100% { transform: scale(1); opacity: 0.7; }
+      50% { transform: scale(1.1); opacity: 1; }
+    }
+    
+    /* Futuristic elements */
+    .glow-text {text-shadow: 0 0 10px rgba(143, 148, 251, 0.7);}
+    .circuit-bg {position: relative; overflow: hidden;}
+    .circuit-bg::before {content: ''; position: absolute; top: 0; left: 0; right: 0; bottom: 0; background-image: radial-gradient(circle at 10% 20%, rgba(78, 84, 200, 0.1) 0%, transparent 20%), radial-gradient(circle at 90% 80%, rgba(143, 148, 251, 0.1) 0%, transparent 20%); pointer-events: none;}
+    
+    /* Advanced Risk Calculator Styles */
+    .risk-presets {display: flex; gap: 10px; margin-bottom: 20px; justify-content: center;}
+    .preset-btn {padding: 8px 16px; background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.2); border-radius: 20px; color: #fff; cursor: pointer; transition: all 0.3s ease; font-size: 14px;}
+    .preset-btn:hover {background: rgba(78, 84, 200, 0.3); transform: translateY(-2px);}
+    .preset-btn.active {background: rgba(78, 84, 200, 0.5); border-color: #8f94fb;}
+    
+    .risk-controls {display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 25px;}
+    @media (max-width: 768px) {.risk-controls {grid-template-columns: 1fr;}}
+    
+    .control-group {background: rgba(255,255,255,0.05); padding: 16px; border-radius: 12px; border: 1px solid rgba(255,255,255,0.1);}
+    .control-group label {display: flex; align-items: center; gap: 8px; margin-bottom: 12px; font-weight: 600; color: #ddd; font-size: 14px;}
+    
+    .slider-input-combo {display: flex; gap: 12px; align-items: center;}
+    .slider-input-combo input[type="range"] {flex: 2; height: 6px; background: rgba(255,255,255,0.2); border-radius: 3px; outline: none; -webkit-appearance: none;}
+    .slider-input-combo input[type="range"]::-webkit-slider-thumb {-webkit-appearance: none; width: 18px; height: 18px; background: linear-gradient(135deg, #4e54c8, #8f94fb); border-radius: 50%; cursor: pointer; box-shadow: 0 2px 6px rgba(0,0,0,0.3);}
+    .slider-input-combo input[type="range"]::-moz-range-thumb {width: 18px; height: 18px; background: linear-gradient(135deg, #4e54c8, #8f94fb); border-radius: 50%; cursor: pointer; border: none; box-shadow: 0 2px 6px rgba(0,0,0,0.3);}
+    .slider-input-combo input[type="number"] {flex: 1; padding: 8px 12px; background: rgba(0,0,0,0.3); border: 1px solid rgba(255,255,255,0.2); border-radius: 6px; color: #fff; text-align: center; font-weight: 600;}
+    
+    .risk-badge {padding: 4px 8px; border-radius: 12px; font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px;}
+    .risk-badge.conservative {background: rgba(76, 217, 100, 0.2); color: #4cd964;}
+    .risk-badge.balanced {background: rgba(255, 204, 0, 0.2); color: #ffcc00;}
+    .risk-badge.aggressive {background: rgba(255, 59, 48, 0.2); color: #ff3b30;}
+    
+    .risk-heat-meter {margin-top: 8px;}
+    .heat-bar {height: 6px; border-radius: 3px; background: linear-gradient(90deg, #4cd964 0%, #ffcc00 50%, #ff3b30 100%); position: relative; overflow: hidden;}
+    .heat-bar::after {content: ''; position: absolute; top: -2px; bottom: -2px; width: 4px; background: #fff; border-radius: 2px; box-shadow: 0 0 8px rgba(255,255,255,0.8); transition: left 0.3s ease;}
+    .heat-labels {display: flex; justify-content: space-between; margin-top: 4px; font-size: 10px; color: #aaa;}
+    
+    .tooltip {display: inline-block; width: 16px; height: 16px; background: rgba(78, 84, 200, 0.3); border-radius: 50%; text-align: center; line-height: 16px; font-size: 10px; cursor: help; color: #8f94fb;}
+    
+    .risk-summary-dashboard {background: rgba(0,0,0,0.2); border: 1px solid rgba(255,255,255,0.1); border-radius: 12px; padding: 20px; margin-top: 20px;}
+    .risk-summary-dashboard h3 {color: #fff; margin-bottom: 16px; display: flex; align-items: center; gap: 8px;}
+    .summary-grid {display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 12px;}
+    .summary-item {background: rgba(255,255,255,0.05); padding: 12px; border-radius: 8px; text-align: center; border: 1px solid rgba(255,255,255,0.1);}
+    .summary-label {font-size: 11px; color: #aaa; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 4px;}
+    .summary-value {font-size: 16px; font-weight: 700; color: #fff;}
+    .summary-value.risk-amount {color: #ff3b30;}
+    .summary-value.profit-amount {color: #4cd964;}
+    .summary-value.rr-ratio {color: #8f94fb;}
+    
+    .form-control {width: 100%; padding: 10px 12px; border: 1px solid rgba(255,255,255,0.2); border-radius: 6px; background: rgba(0,0,0,0.2); color: #fff; transition: border-color 0.3s ease;}
+    .form-control:focus {outline: none; border-color: rgba(78, 84, 200, 0.5);}
+    .btn-success {background: linear-gradient(135deg, #4cd964, #2fb344); color: #fff;}
+    .btn-info {background: linear-gradient(135deg, #17a2b8, #138496); color: #fff;}
+    .hidden {display: none !important;}
+    
+    .select{width:100%;padding:10px 12px;border:1px solid rgba(255,255,255,.2);border-radius:6px;background:rgba(0,0,0,.2);color:#fff}
+    .selector-row{display:flex;gap:12px;align-items:center}
+    .split-options{display:flex;flex-wrap:wrap;gap:14px;margin-top:14px}
+    .split-option{flex:1;min-width:220px;background:rgba(255,255,255,.1);border-radius:10px;padding:16px;border:1px solid rgba(255,255,255,.1);text-align:center;cursor:pointer;transition:all 0.3s ease}
+    .split-option:hover{transform:translateY(-5px);box-shadow:0 5px 15px rgba(0,0,0,.3);background:rgba(255,255,255,.15)}
+    .split-option h3{color:#fff;margin-bottom:8px;font-size:1rem}
+    .split-option p{color:#aaa;font-size:.9rem;margin-bottom:10px}
+    
+    /* Toast Notifications */
+    .toast {
+      position: fixed;
+      top: 20px;
+      right: 20px;
+      padding: 12px 20px;
+      border-radius: 6px;
+      color: #fff;
+      font-weight: 600;
+      z-index: 9999;
+      animation: slideIn 0.3s ease;
+    }
+    .toast-success { background: rgba(76, 217, 100, 0.9); }
+    .toast-error { background: rgba(255, 59, 48, 0.9); }
+    .toast-info { background: rgba(78, 84, 200, 0.9); }
+    
+    @keyframes slideIn {
+      from { transform: translateX(100%); opacity: 0; }
+      to { transform: translateX(0); opacity: 1; }
+    }
+    
+    /* F&O Split Preview Table */
+    .split-preview-table {
+      width: 100%;
+      border-collapse: collapse;
+      background: rgba(255,255,255,0.05);
+      border-radius: 8px;
+      overflow: hidden;
+      margin-top: 10px;
+    }
+    .split-preview-table th,
+    .split-preview-table td {
+      padding: 8px 6px;
+      text-align: left;
+      border-bottom: 1px solid rgba(255,255,255,0.1);
+      font-size: 11px;
+    }
+    .split-preview-table th {
+      background-color: rgba(255,255,255,0.1);
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      color: #fff;
+    }
+    .split-preview-table td {
+      color: #ddd;
+    }
+    .split-action-btn {
+      padding: 4px 8px;
+      font-size: 10px;
+      border: 1px solid #4e54c8;
+      background: rgba(78,84,200,0.2);
+      color: #8f94fb;
+      border-radius: 3px;
+      cursor: pointer;
+      transition: all 0.2s ease;
+    }
+    .split-action-btn:hover {
+      background: #4e54c8;
+      color: white;
+    }
+    .tiny-link {
+      font-size: 12px;
+      color: #4e54c8;
+      background: rgba(255,255,255,0.2);
+      border: 1px solid rgba(255,255,255,0.1);
+      padding: 4px 8px;
+      border-radius: 6px;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      text-decoration: none;
+    }
+    .tiny-link:hover {
+      background: rgba(255,255,255,0.3);
+      transform: translateY(-1px);
+    }
+    
+    #deleteTemplateBtn {
+      background: rgba(255,59,48,.2);
+      color: #ff3b30;
+      border: 1px solid rgba(255,59,48,.3);
+    }
+    #deleteTemplateBtn:hover {
+      background: rgba(255,59,48,.3);
+    }
+    #saveTemplateBtn {
+      background: rgba(76,217,100,.2);
+      color: #4cd964;
+      border: 1px solid rgba(76,217,100,.3);
+    }
+    #saveTemplateBtn:hover {
+      background: rgba(76,217,100,.3);
+    }
+    
+    #unsavedIndicator {
+      animation: pulse 2s infinite;
+    }
+    @keyframes pulse {
+      0% { opacity: 0.7; }
+      50% { opacity: 1; }
+      100% { opacity: 0.7; }
+    }
+    
+    /* Split Editor Overlay */
+    .editor-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); z-index: 2000; display: none; }
+    .editor-panel { position: absolute; right: 0; top: 0; width: 400px; height: 100%; background: linear-gradient(135deg, #1a1a2e, #16213e); backdrop-filter: blur(10px); padding: 20px; overflow-y: auto; border-left: 2px solid #4e54c8; box-shadow: -5px 0 20px rgba(0,0,0,0.5); }
+    .editor-header { border-bottom: 2px solid #4e54c8; padding-bottom: 15px; margin-bottom: 20px; }
+    .field-group { margin-bottom: 20px; }
+    .field-group label { display: block; margin-bottom: 8px; font-weight: 700; color: #fff; font-size: 14px; }
+    .field-group input { width: 100%; padding: 12px; border: 2px solid #4e54c8; border-radius: 6px; background: rgba(0,0,0,0.4); color: #fff; font-size: 14px; font-weight: 600; }
+    .field-group input:read-only { background: rgba(78,84,200,0.2); border-color: #8f94fb; }
+    .field-group input:focus { outline: none; border-color: #8f94fb; box-shadow: 0 0 10px rgba(143,148,251,0.3); }
+    .toggle-group { display: flex; gap: 10px; align-items: center; margin-bottom: 10px; }
+    .toggle-btn { padding: 8px 16px; border: 2px solid #4e54c8; background: rgba(78,84,200,0.2); cursor: pointer; border-radius: 6px; color: #fff; font-weight: 600; transition: all 0.3s ease; }
+    .toggle-btn:hover { background: rgba(78,84,200,0.4); transform: translateY(-1px); }
+    .toggle-btn.active { background: #4e54c8; border-color: #8f94fb; box-shadow: 0 0 15px rgba(143,148,251,0.5); }
+    .calc-display { font-size: 14px; color: #8f94fb; margin-top: 8px; font-weight: 600; }
+    .error-msg { color: #ff3b30; font-size: 12px; margin-top: 5px; font-weight: 600; }
+    .editor-actions { display: flex; gap: 15px; margin-top: 30px; }
+    .editor-actions button { padding: 12px 24px; border: none; border-radius: 6px; font-weight: 700; font-size: 14px; cursor: pointer; transition: all 0.3s ease; }
+    .btn-primary { background: linear-gradient(135deg, #4e54c8, #8f94fb); color: #fff; }
+    .btn-primary:hover { background: linear-gradient(135deg, #3a3f99, #6f73d9); transform: translateY(-2px); box-shadow: 0 5px 15px rgba(78,84,200,0.4); }
+    .btn-secondary { background: linear-gradient(135deg, #6c757d, #495057); color: #fff; }
+    .btn-secondary:hover { background: linear-gradient(135deg, #5a6268, #343a40); transform: translateY(-2px); box-shadow: 0 5px 15px rgba(108,117,125,0.4); }
+  </style>
+</head>
+<body>
+<div class="container">
+  <header class="circuit-bg" style="position: relative;">
+    <div class="stock-info">
+      <div class="stock-icon"><i class="fas fa-brain"></i></div>
+      <div class="stock-details">
+        <h1 class="glow-text">{{ trade.derivative_name or trade.symbol or "UNKNOWN" }}</h1>
+        <p>F&O Trade | Trade ID: {{ trade.id }}</p>
+      </div>
+    </div>
+    <div class="live-price">
+      <div class="price">₹{{ "%.2f"|format(trade.avg_price) }}</div>
+      <div class="change">
+        {{ "Buy Trade" if trade.trade_type|lower == "buy" else "Sell Trade" }}
+      </div>
+    </div>
+    {% if trade.status == 'closed' %}
+    <div style="position: absolute; top: 10px; right: 10px; background: rgba(255, 59, 48, 0.9); color: white; padding: 8px 16px; border-radius: 20px; font-weight: bold; font-size: 14px; z-index: 1000;">
+      POSITION CLOSED
+    </div>
+    {% endif %}
+  </header>
+
+  <div class="dashboard">
+    <!-- LEFT: Position Management -->
+    <div class="card circuit-bg" id="positionManagementCard">
+      <h2><i class="fas fa-chart-line"></i> F&O Position Management</h2>
+
+      <!-- Lot Information -->
+      <div class="lot-info">
+        <h3><i class="fas fa-cubes"></i> Lot Information</h3>
+        <div class="lot-stats">
+          <div class="lot-stat">
+            <div class="lot-stat-value">{{ trade.lot_size or 25 }}</div>
+            <div class="lot-stat-label">Lot Size</div>
+          </div>
+          <div class="lot-stat">
+            <div class="lot-stat-value">{{ (trade.quantity // (trade.lot_size or 25)) or 1 }}</div>
+            <div class="lot-stat-label">Number of Lots</div>
+          </div>
+          <div class="lot-stat">
+            <div class="lot-stat-value">₹{{ "%.2f"|format((trade.total_reward or 0) / ((trade.quantity // (trade.lot_size or 25)) or 1)) }}</div>
+            <div class="lot-stat-label">Profit Per Lot</div>
+          </div>
+          <div class="lot-stat">
+            <div class="lot-stat-value">₹{{ "%.2f"|format((trade.capital_used or 0) / ((trade.quantity // (trade.lot_size or 25)) or 1)) }}</div>
+            <div class="lot-stat-label">Capital Per Lot</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="form-row">
+        <div class="form-group">
+          <label for="inpAvgPrice">Average Price (₹)</label>
+          <input id="inpAvgPrice" type="number" step="0.01" value="{{ '%.2f'|format(trade.avg_price) }}">
+        </div>
+        <div class="form-group">
+          <label for="inpQty">Quantity</label>
+          <input id="inpQty" type="number" value="{{ trade.quantity }}">
+        </div>
+      </div>
+
+      <div class="form-row">
+        <div class="form-group">
+          <label for="inpSL">Stop Loss (₹)</label>
+          <input id="inpSL" type="number" step="0.01" value="{{ '%.2f'|format(trade.stop_loss_price) }}">
+        </div>
+        <div class="form-group">
+          <label for="inpTarget">Target (₹)</label>
+          <input id="inpTarget" type="number" step="0.01" value="{{ '%.2f'|format(trade.target_price) }}">
+        </div>
+      </div>
+
+      <div class="actions" style="margin-bottom:16px;">
+        <button id="updateBtn">Save Update</button>
+        <button id="closeBtn" class="btn-sell">Close Position</button>
+      </div>
+
+      <div class="stats tiles" id="summaryTiles">
+        <div class="stat-item">
+          <div class="stat-value" id="ts-capital">₹{{ '%.2f'|format(trade.capital_used) }}<span class="no-leverage-badge">No Leverage</span></div>
+          <div class="stat-label">Capital Used</div>
+        </div>
+        <div class="stat-item">
+          <div class="stat-value" id="ts-rr">1:{{ '%.1f'|format(trade.rr_ratio) }}</div>
+          <div class="stat-label">Risk-Reward Ratio</div>
+        </div>
+        <div class="stat-item">
+          <div class="stat-value" id="ts-profit">{{ '%.2f'|format(trade.expected_return) }}%</div>
+          <div class="stat-label">Expected Return</div>
+        </div>
+        <div class="stat-item">
+          <div class="stat-value" id="ts-risk">{{ '%.2f'|format(trade.risk_percent) }}%</div>
+          <div class="stat-label">Risk Percentage</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- RIGHT: Choose Mode -->
+    <div class="card circuit-bg" id="modeCard">
+      <h2><i class="fas fa-robot"></i> AI F&O Trading Assistant</h2>
+      <div class="selector-row" style="margin-bottom:12px;">
+        <select id="modeSelect" class="select">
+          <option value="manual">Manual F&O position management</option>
+          <option value="ai" selected>AI-powered F&O position management</option>
+        </select>
+        <button id="backToManual" class="btn-back hidden">Back to Manual</button>
+      </div>
+
+      <div id="modeArea">
+        <!-- MANUAL -->
+        <div id="manualMode" class="hidden">
+          <h4 style="color:#fff;margin-top:16px;">F&O Lot Split Options</h4>
+          <div class="form-group" style="margin-bottom:12px;">
+            <label for="splitMode">Split Mode</label>
+            <select id="splitMode" class="select">
+              <option value="full">Full Lots</option>
+              <option value="half">Divide Lots in Half</option>
+              <option value="custom">Custom Lot Split</option>
+            </select>
+          </div>
+          
+          <div id="customSplitContainer" class="form-group hidden" style="margin-bottom:12px;">
+            <label for="customSplitInput">Custom Lot Split (comma-separated)</label>
+            <input id="customSplitInput" type="text" placeholder="e.g., 2,1,1" class="form-control">
+            <small style="color:#aaa;">Enter lot quantities separated by commas. Total must equal total lots.</small>
+          </div>
+          
+          <!-- Applied Split Table -->
+          <div id="appliedSplitTable" class="hidden" style="background:rgba(0,0,0,0.2);padding:16px;border-radius:8px;margin-bottom:16px;">
+            <h5 style="color:#fff;margin-bottom:12px;display:flex;align-items:center;justify-content:space-between;">
+              F&O Split Preview:
+              <div style="display:flex;gap:8px;">
+                <button id="saveTemplateBtn" class="tiny-link" style="font-size:12px;" onclick="saveFOPreviewTemplate()">Save F&O Template</button>
+                <button id="resetSplitBtn" class="tiny-link" style="font-size:12px;" onclick="resetFOSplitTable()">Reset</button>
+                <button id="deleteTemplateBtn" class="tiny-link" style="font-size:12px;display:none;" onclick="deleteFOPreviewTemplate()">Delete Template</button>
+              </div>
+            </h5>
+            <table class="split-preview-table">
+              <thead>
+                <tr>
+                  <th>PREVIEW</th>
+                  <th>SL</th>
+                  <th>TARGET</th>
+                  <th>LOTS</th>
+                  <th>QTY</th>
+                  <th>ACTION</th>
+                </tr>
+              </thead>
+              <tbody id="splitTableBody">
+              </tbody>
+            </table>
+          </div>
+          
+          <!-- Unsaved Changes Indicator -->
+          <div id="unsavedIndicator" class="hidden" style="background:rgba(255,204,0,0.2);color:#ffcc00;padding:8px;border-radius:6px;margin-bottom:12px;font-size:14px;">
+            <i class="fas fa-exclamation-triangle"></i> You have unsaved F&O changes
+          </div>
+        </div>
+
+        <!-- AI MODE -->
+        <div id="aiMode">
+          <div class="ai-grid">
+            <div>
+              <h3 style="color:#fff;margin-top:8px;">AI F&O Exit Planner (Lot-Based Rules)</h3>
+              <div id="ruleInfo" style="background:rgba(0,0,0,.2);padding:12px;border-radius:8px;margin-bottom:12px;">
+                <p style="color:#aaa;margin:0">AI will select F&O rules based on lot size:</p>
+                <ul style="color:#aaa;margin:8px 0 0 0;padding-left:20px;font-size:12px;">
+                  <li>Small (1-2 lots): SL = -1.5%, Exit-1 = +3% (100%)</li>
+                  <li>Medium (3-5 lots): SL = -1.5%, Exit-1 = +2% (40%), Exit-2 = +4% (60%)</li>
+                  <li>Large (>5 lots): SL = -1%, Exit-1 = +1.5% (30%), Exit-2 = +3% (40%), Exit-3 = +5% (30%)</li>
+                </ul>
+              </div>
+              
+              <div class="actions" style="justify-content:flex-start;margin-top:6px;gap:8px;">
+                <button id="btnPlan" class="btn-ai"><i class="fas fa-brain"></i> Generate AI F&O Plan</button>
+                <button id="btnSavePlan" class="btn-ai"><i class="fas fa-save"></i> Save Plan</button>
+                <button id="btnViewPlans" class="tiny-link" style="border:none">View Saved Plans</button>
+                <button id="btnReset" class="tiny-link" style="border:none">Reset</button>
+              </div>
+
+              <div style="margin-top:12px">
+                <h4 style="color:#fff;margin-bottom:6px;">AI Console</h4>
+                <div id="ailog" class="ai-console" aria-live="polite"></div>
+                <div class="ai-bar"><div class="dot"></div><div>AI is analyzing your F&O entry, lot size, and volatility bands</div></div>
+              </div>
+            </div>
+
+            <div>
+              <h3 style="color:#fff;margin-top:8px;">F&O Plan Output</h3>
+              <div id="plan"><p style="color:#aaa">Click <b>Generate AI F&O Plan</b>. The exits will appear here based on lot size.</p></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Advanced Interactive F&O Risk Management Calculator -->
+  <div class="card circuit-bg">
+    <h2><i class="fas fa-calculator"></i> Advanced F&O Risk Management Calculator</h2>
+    
+    <!-- Preset Risk Buttons -->
+    <div class="risk-presets">
+      <button class="preset-btn" data-risk="1">Conservative (1%)</button>
+      <button class="preset-btn" data-risk="1.5">Normal (1.5%)</button>
+      <button class="preset-btn" data-risk="3">Aggressive (3%)</button>
+    </div>
+    
+    <!-- Interactive Controls -->
+    <div class="risk-controls">
+      <!-- Account Capital -->
+      <div class="control-group">
+        <label>Account Capital (₹) <span class="tooltip" title="Total F&O trading capital available">ⓘ</span></label>
+        <div class="slider-input-combo">
+          <input type="range" id="capital-slider" min="50000" max="2000000" step="25000" value="{{ (trade.capital_used * 5) or 500000 }}">
+          <input type="number" id="capital-input" min="50000" max="2000000" step="25000" value="{{ (trade.capital_used * 5) or 500000 }}">
+        </div>
+      </div>
+      
+      <!-- Risk Percentage -->
+      <div class="control-group">
+        <label>Risk per F&O Trade (%) <span class="risk-badge" id="risk-badge">Balanced</span></label>
+        <div class="slider-input-combo">
+          <input type="range" id="risk-slider" min="0.5" max="5" step="0.1" value="1.5">
+          <input type="number" id="risk-input" min="0.5" max="5" step="0.1" value="1.5">
+        </div>
+        <!-- Risk Heat Meter -->
+        <div class="risk-heat-meter">
+          <div class="heat-bar" id="heat-bar"></div>
+          <div class="heat-labels">
+            <span>Conservative</span>
+            <span>Balanced</span>
+            <span>Aggressive</span>
+          </div>
+        </div>
+      </div>
+      
+      <!-- Expected Return -->
+      <div class="control-group">
+        <label>Expected Return (%) <span class="tooltip" title="Target profit percentage for F&O">ⓘ</span></label>
+        <div class="slider-input-combo">
+          <input type="range" id="return-slider" min="1" max="15" step="0.5" value="3">
+          <input type="number" id="return-input" min="1" max="15" step="0.5" value="3">
+        </div>
+      </div>
+      
+      <!-- Lot Size -->
+      <div class="control-group">
+        <label>Number of Lots <span class="tooltip" title="Number of F&O lots to trade">ⓘ</span></label>
+        <div class="slider-input-combo">
+          <input type="range" id="lots-slider" min="1" max="20" step="1" value="{{ (trade.quantity // (trade.lot_size or 25)) or 1 }}">
+          <input type="number" id="lots-input" min="1" max="20" step="1" value="{{ (trade.quantity // (trade.lot_size or 25)) or 1 }}">
+        </div>
+      </div>
+    </div>
+    
+    <!-- Live Summary Dashboard -->
+    <div class="risk-summary-dashboard">
+      <h3><i class="fas fa-chart-pie"></i> Live F&O Position Summary</h3>
+      <div class="summary-grid">
+        <div class="summary-item">
+          <div class="summary-label">F&O Position Value</div>
+          <div class="summary-value" id="position-value">₹0</div>
+        </div>
+        <div class="summary-item">
+          <div class="summary-label">Margin Used</div>
+          <div class="summary-value" id="margin-used">₹0</div>
+        </div>
+        <div class="summary-item">
+          <div class="summary-label">Risk Amount</div>
+          <div class="summary-value risk-amount" id="risk-amount">₹0</div>
+        </div>
+        <div class="summary-item">
+          <div class="summary-label">Expected Profit</div>
+          <div class="summary-value profit-amount" id="expected-profit">₹0</div>
+        </div>
+        <div class="summary-item">
+          <div class="summary-label">Risk:Reward Ratio</div>
+          <div class="summary-value rr-ratio" id="rr-ratio">1:0</div>
+        </div>
+        <div class="summary-item">
+          <div class="summary-label">Target Price</div>
+          <div class="summary-value" id="target-price">₹0</div>
+        </div>
+        <div class="summary-item">
+          <div class="summary-label">Stop Loss</div>
+          <div class="summary-value" id="stop-loss-price">₹0</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Action Buttons -->
+  <div class="card">
+    <div class="actions">
+      <button type="button" onclick="window.location.href='/saved_fno'" class="btn-back">
+        <i class="fas fa-arrow-left"></i> Back to F&O Trades
+      </button>
+      <button type="button" onclick="copyTradeDetails()">
+        <i class="fas fa-copy"></i> Copy Details
+      </button>
+      <button type="button" onclick="addToJournal()">
+        <i class="fas fa-book"></i> Add to Journal
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- Confirmation Modal -->
+<div id="confirmModal" style="position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); z-index: 1000; display: none; align-items: center; justify-content: center;">
+  <div style="background: rgba(255,255,255,0.1); border-radius: 12px; padding: 24px; max-width: 400px; backdrop-filter: blur(10px); border: 1px solid rgba(255,255,255,0.2);">
+    <h3 style="color: #fff; margin-bottom: 16px; text-align: center;">Confirm F&O Update</h3>
+    <p style="color: #ddd; margin-bottom: 20px; text-align: center;">This will update your F&O position, remove old calculations, and replace them with the new values. Do you want to continue?</p>
+    <div style="display: flex; gap: 12px; justify-content: center;">
+      <button id="confirmYes" style="background: linear-gradient(135deg, #4e54c8, #8f94fb); color: #fff; border: none; padding: 10px 20px; border-radius: 6px; cursor: pointer;">Yes, Update</button>
+      <button id="confirmNo" style="background: linear-gradient(135deg, #ff416c, #ff4b2b); color: #fff; border: none; padding: 10px 20px; border-radius: 6px; cursor: pointer;">Cancel</button>
+    </div>
+  </div>
+</div>
+
+<!-- Split Editor Overlay -->
+<div class="editor-overlay" id="splitEditorOverlay">
+  <div class="editor-panel">
+    <div class="editor-header">
+      <h3 style="color: #fff; margin-bottom: 8px;">Edit F&O Split Position</h3>
+      <p style="color: #aaa;">Part <span id="editPart"></span> — <span id="editLots"></span> lots (<span id="editQty"></span> shares)</p>
+    </div>
+    
+    <div class="field-group">
+      <label>Average Price (₹)</label>
+      <input type="number" id="editAvgPrice" readonly>
+    </div>
+    
+    <div class="field-group">
+      <label>Lots</label>
+      <input type="number" id="editLotsInput" readonly>
+    </div>
+    
+    <div class="field-group">
+      <label>Quantity</label>
+      <input type="number" id="editQuantity" readonly>
+    </div>
+    
+    <div class="field-group">
+      <label>Stop-Loss</label>
+      <div class="toggle-group">
+        <button class="toggle-btn active" id="stopPctBtn">%</button>
+        <button class="toggle-btn" id="stopPriceBtn">₹</button>
+      </div>
+      <input type="number" id="stopInput" placeholder="Enter stop loss %">
+      <div class="calc-display" id="stopCalc"></div>
+      <div class="error-msg" id="stopError"></div>
+    </div>
+    
+    <div class="field-group">
+      <label>Target</label>
+      <div class="toggle-group">
+        <button class="toggle-btn active" id="targetPctBtn">%</button>
+        <button class="toggle-btn" id="targetPriceBtn">₹</button>
+      </div>
+      <input type="number" id="targetInput" placeholder="Enter target %">
+      <div class="calc-display" id="targetCalc"></div>
+      <div class="error-msg" id="targetError"></div>
+    </div>
+    
+    <div class="editor-actions">
+      <button class="btn btn-primary" id="splitApplyBtn">Apply</button>
+      <button class="btn btn-secondary" id="splitCancelBtn">Cancel</button>
+    </div>
+  </div>
+</div>
+
+<footer>
+  <p>© 2025 Advanced AI F&O Position Management | For demonstration purposes only</p>
+</footer>
+
+<script>
+/* ---------- F&O Trade data from backend ---------- */
+const tradeData = {
+  id: "{{ trade.id }}",
+  tradeType: "{{ trade.trade_type|lower }}",
+  avgPrice: parseFloat("{{ '%.2f'|format(trade.avg_price) }}"),
+  stopLoss: parseFloat("{{ '%.2f'|format(trade.stop_loss_price) }}"),
+  quantity: parseInt("{{ trade.quantity }}"),
+  target: parseFloat("{{ '%.2f'|format(trade.target_price) }}"),
+  capital_used: parseFloat("{{ '%.2f'|format(trade.capital_used) }}"),
+  rr_ratio: parseFloat("{{ '%.1f'|format(trade.rr_ratio) }}"),
+  expected_return: parseFloat("{{ '%.2f'|format(trade.expected_return) }}"),
+  risk_percent: parseFloat("{{ '%.2f'|format(trade.risk_percent) }}"),
+  total_reward: parseFloat("{{ '%.2f'|format(trade.total_reward) }}"),
+  total_risk: parseFloat("{{ '%.2f'|format(trade.total_risk) }}"),
+  derivative_name: "{{ trade.derivative_name or trade.symbol or 'UNKNOWN' }}",
+  lot_size: {{ trade.lot_size or 25 }},
+  status: "{{ trade.status or 'open' }}",
+  symbol: "{{ trade.symbol }}",
+  commentSymbol: "{{ trade.comment }}",
+  timestamp: new Date("{{ trade.timestamp }}")
+};
+
+let aiPlanData = null;
+let currentSplitMode = 'full';
+let splitParts = [];
+
+/* ---------- Mode switch ---------- */
+const modeSelect = document.getElementById('modeSelect');
+const backToManualBtn = document.getElementById('backToManual');
+const modeCard = document.getElementById('modeCard');
+const positionCard = document.getElementById('positionManagementCard');
+
+modeSelect.addEventListener('change', ()=>{
+  const val = modeSelect.value;
+  const isAIMode = val === 'ai';
+  
+  document.getElementById('manualMode').classList.toggle('hidden', isAIMode);
+  document.getElementById('aiMode').classList.toggle('hidden', !isAIMode);
+  backToManualBtn.classList.toggle('hidden', !isAIMode);
+  
+  // Expand cards for AI mode
+  modeCard.classList.toggle('ai-active', isAIMode);
+  positionCard.classList.toggle('ai-active', isAIMode);
+});
+
+backToManualBtn.addEventListener('click', () => {
+  modeSelect.value = 'manual';
+  modeSelect.dispatchEvent(new Event('change'));
+});
+
+/* ---------- F&O Manual Split Management ---------- */
+function handleFOSplitModeChange() {
+  const mode = document.getElementById('splitMode').value;
+  const customContainer = document.getElementById('customSplitContainer');
+  
+  currentSplitMode = mode;
+  
+  if (mode === 'custom') {
+    customContainer.classList.remove('hidden');
+  } else {
+    customContainer.classList.add('hidden');
+    updateFOSplitPreview();
+  }
+}
+
+function validateFOCustomSplit() {
+  const input = document.getElementById('customSplitInput').value;
+  const totalLots = Math.floor(tradeData.quantity / tradeData.lot_size) || 1;
+  
+  if (!input.trim()) {
+    updateFOSplitPreview();
+    return;
+  }
+  
+  try {
+    const parts = input.split(',').map(p => parseInt(p.trim())).filter(p => p > 0);
+    const total = parts.reduce((sum, p) => sum + p, 0);
+    
+    if (total === totalLots) {
+      splitParts = parts.map((lots, i) => ({ lots, qty: lots * tradeData.lot_size, label: `Lot Part ${i + 1}` }));
+      updateFOSplitPreview();
+      document.getElementById('customSplitInput').style.borderColor = 'rgba(76, 217, 100, 0.5)';
+    } else {
+      document.getElementById('customSplitInput').style.borderColor = 'rgba(255, 59, 48, 0.5)';
+    }
+  } catch (e) {
+    document.getElementById('customSplitInput').style.borderColor = 'rgba(255, 59, 48, 0.5)';
+  }
+}
+
+function updateFOSplitPreview() {
+  const appliedSplitTable = document.getElementById('appliedSplitTable');
+  const splitTableBody = document.getElementById('splitTableBody');
+  const mode = currentSplitMode;
+  const totalLots = Math.floor(tradeData.quantity / tradeData.lot_size) || 1;
+  const lotSize = tradeData.lot_size || 25;
+  
+  if (mode === 'full') {
+    splitParts = [{ lots: totalLots, qty: tradeData.quantity, label: 'Full Lots' }];
+  } else if (mode === 'half') {
+    const halfLots = Math.floor(totalLots / 2);
+    const remainder = totalLots % 2;
+    splitParts = [
+      { lots: halfLots, qty: halfLots * lotSize, label: 'First Half' },
+      { lots: halfLots + remainder, qty: (halfLots + remainder) * lotSize, label: 'Second Half' }
+    ];
+  }
+  
+  if (splitParts.length === 0) {
+    appliedSplitTable.classList.add('hidden');
+    return;
+  }
+  
+  appliedSplitTable.classList.remove('hidden');
+  
+  if (splitTableBody) {
+    splitTableBody.innerHTML = splitParts.map((part, index) => `
+      <tr>
+        <td>Part ${index + 1} (${part.lots} lots)</td>
+        <td>₹${tradeData.stopLoss.toFixed(2)}</td>
+        <td>₹${tradeData.target.toFixed(2)}</td>
+        <td>${part.lots}</td>
+        <td>${part.qty}</td>
+        <td><button class="split-action-btn" onclick="editFOSplitPart(${index + 1}, ${part.lots}, ${part.qty})">Edit</button></td>
+      </tr>
+    `).join('');
+  }
+  
+  markUnsavedChanges();
+}
+
+let splitCurrentEdit = null;
+let splitStopMode = 'pct';
+let splitTargetMode = 'pct';
+
+window.editFOSplitPart = function(partNumber, lots, qty) {
+  const overlay = document.getElementById('splitEditorOverlay');
+  splitCurrentEdit = { part: partNumber, lots: lots, qty: qty };
+  
+  document.getElementById('editPart').textContent = partNumber;
+  document.getElementById('editLots').textContent = lots;
+  document.getElementById('editQty').textContent = qty;
+  document.getElementById('editAvgPrice').value = document.getElementById('inpAvgPrice').value;
+  document.getElementById('editLotsInput').value = lots;
+  document.getElementById('editQuantity').value = qty;
+  
+  document.getElementById('stopInput').value = '';
+  document.getElementById('targetInput').value = '';
+  setSplitToggleMode('stop', 'pct');
+  setSplitToggleMode('target', 'pct');
+  
+  overlay.style.display = 'block';
+  updateSplitCalculations();
+};
+
+function setSplitToggleMode(type, mode) {
+  const input = document.getElementById(type === 'stop' ? 'stopInput' : 'targetInput');
+  if (type === 'stop') {
+    splitStopMode = mode;
+    document.getElementById('stopPctBtn').classList.toggle('active', mode === 'pct');
+    document.getElementById('stopPriceBtn').classList.toggle('active', mode === 'price');
+    input.placeholder = mode === 'pct' ? 'Enter stop loss %' : 'Enter stop loss price';
+  } else {
+    splitTargetMode = mode;
+    document.getElementById('targetPctBtn').classList.toggle('active', mode === 'pct');
+    document.getElementById('targetPriceBtn').classList.toggle('active', mode === 'price');
+    input.placeholder = mode === 'pct' ? 'Enter target %' : 'Enter target price';
+  }
+  input.value = '';
+  updateSplitCalculations();
+}
+
+function calcStopPrice(avg, pct) { return avg * (1 - pct / 100); }
+function calcTargetPrice(avg, pct) { return avg * (1 + pct / 100); }
+function calcStopPct(avg, price) { return (1 - price / avg) * 100; }
+function calcTargetPct(avg, price) { return (price / avg - 1) * 100; }
+function isValidNumber(val) { return !isNaN(val) && isFinite(val) && val > 0; }
+
+function updateSplitCalculations() {
+  const avg = parseFloat(document.getElementById('inpAvgPrice').value);
+  const applyBtn = document.getElementById('splitApplyBtn');
+  const stopCalc = document.getElementById('stopCalc');
+  const targetCalc = document.getElementById('targetCalc');
+  const stopError = document.getElementById('stopError');
+  const targetError = document.getElementById('targetError');
+  const stopInput = document.getElementById('stopInput');
+  const targetInput = document.getElementById('targetInput');
+  
+  if (!isValidNumber(avg)) {
+    applyBtn.disabled = true;
+    stopCalc.textContent = 'Average Price unavailable';
+    targetCalc.textContent = 'Average Price unavailable';
+    return;
+  }
+  applyBtn.disabled = false;
+  
+  const stopVal = parseFloat(stopInput.value);
+  if (isValidNumber(stopVal)) {
+    stopError.textContent = '';
+    if (splitStopMode === 'pct') {
+      const price = calcStopPrice(avg, stopVal);
+      stopCalc.textContent = `Stop Price: ₹${price.toFixed(2)}`;
+    } else {
+      const pct = calcStopPct(avg, stopVal);
+      stopCalc.textContent = `Stop %: ${pct.toFixed(2)}%`;
+    }
+  } else {
+    stopCalc.textContent = '';
+    if (stopInput.value) stopError.textContent = 'Invalid stop loss value';
+  }
+  
+  const targetVal = parseFloat(targetInput.value);
+  if (isValidNumber(targetVal)) {
+    targetError.textContent = '';
+    if (splitTargetMode === 'pct') {
+      const price = calcTargetPrice(avg, targetVal);
+      targetCalc.textContent = `Target Price: ₹${price.toFixed(2)}`;
+    } else {
+      const pct = calcTargetPct(avg, targetVal);
+      targetCalc.textContent = `Target %: ${pct.toFixed(2)}%`;
+    }
+  } else {
+    targetCalc.textContent = '';
+    if (targetInput.value) targetError.textContent = 'Invalid target value';
+  }
+}
+
+function initSplitEditor() {
+  const overlay = document.getElementById('splitEditorOverlay');
+  const editAvgPrice = document.getElementById('editAvgPrice');
+  
+  document.getElementById('inpAvgPrice').addEventListener('input', () => {
+    if (editAvgPrice) editAvgPrice.value = document.getElementById('inpAvgPrice').value;
+    updateSplitCalculations();
+  });
+  
+  document.getElementById('stopInput')?.addEventListener('input', updateSplitCalculations);
+  document.getElementById('targetInput')?.addEventListener('input', updateSplitCalculations);
+  
+  document.getElementById('stopPctBtn')?.addEventListener('click', () => setSplitToggleMode('stop', 'pct'));
+  document.getElementById('stopPriceBtn')?.addEventListener('click', () => setSplitToggleMode('stop', 'price'));
+  document.getElementById('targetPctBtn')?.addEventListener('click', () => setSplitToggleMode('target', 'pct'));
+  document.getElementById('targetPriceBtn')?.addEventListener('click', () => setSplitToggleMode('target', 'price'));
+  
+  document.getElementById('splitApplyBtn')?.addEventListener('click', () => {
+    if (!splitCurrentEdit) return;
+    const avg = parseFloat(document.getElementById('inpAvgPrice').value);
+    const stopVal = parseFloat(document.getElementById('stopInput').value);
+    const targetVal = parseFloat(document.getElementById('targetInput').value);
+    
+    let stopPrice = null, targetPrice = null;
+    if (isValidNumber(stopVal)) {
+      stopPrice = splitStopMode === 'pct' ? calcStopPrice(avg, stopVal) : stopVal;
+    }
+    if (isValidNumber(targetVal)) {
+      targetPrice = splitTargetMode === 'pct' ? calcTargetPrice(avg, targetVal) : targetVal;
+    }
+    
+    // Update the table row with calculated values
+    const tableBody = document.getElementById('splitTableBody');
+    const rows = tableBody.querySelectorAll('tr');
+    const rowIndex = splitCurrentEdit.part - 1;
+    
+    if (rows[rowIndex]) {
+      const cells = rows[rowIndex].querySelectorAll('td');
+      if (cells.length >= 5) {
+        cells[1].textContent = stopPrice ? `₹${stopPrice.toFixed(2)}` : '₹0.00';
+        cells[2].textContent = targetPrice ? `₹${targetPrice.toFixed(2)}` : '₹0.00';
+      }
+    }
+    
+    showToast('F&O split values updated successfully!', 'success');
+    overlay.style.display = 'none';
+    markUnsavedChanges();
+  });
+  
+  document.getElementById('splitCancelBtn')?.addEventListener('click', () => {
+    overlay.style.display = 'none';
+  });
+  
+  overlay?.addEventListener('click', (e) => {
+    if (e.target === overlay) overlay.style.display = 'none';
+  });
+}
+
+// Save F&O preview template function
+window.saveFOPreviewTemplate = async function() {
+  const splitTableBody = document.getElementById('splitTableBody');
+  if (!splitTableBody || splitTableBody.children.length === 0) {
+    showToast('No F&O split preview data to save', 'error');
+    return;
+  }
+  
+  const instrument = tradeData.derivative_name || tradeData.symbol || 'UNKNOWN';
+  const strike = null;
+  
+  const payload = {
+    split_mode: currentSplitMode,
+    split_parts: splitParts,
+    table_data: Array.from(splitTableBody.children).map(row => {
+      const cells = row.querySelectorAll('td');
+      return {
+        preview: cells[0]?.textContent || '',
+        sl: cells[1]?.textContent || '',
+        target: cells[2]?.textContent || '',
+        lots: cells[3]?.textContent || '',
+        qty: cells[4]?.textContent || ''
+      };
+    })
+  };
+  
+  try {
+    const response = await fetch('/api/templates', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ instrument, strike, payload })
+    });
+    
+    const result = await response.json();
+    if (response.ok && result.template_id) {
+      window.currentFOTemplateId = result.template_id;
+      showToast('F&O template saved successfully!', 'success');
+      toggleFOButtons(true);
+      clearUnsavedChanges();
+    } else {
+      showToast('Failed to save F&O template: ' + (result.error || 'Unknown error'), 'error');
+    }
+  } catch (error) {
+    showToast('Network error: ' + error.message, 'error');
+  }
+};
+
+// Delete F&O preview template function
+window.deleteFOPreviewTemplate = async function() {
+  const templateId = window.currentFOTemplateId;
+  if (!templateId) {
+    showToast('No F&O template to delete', 'error');
+    return;
+  }
+  
+  try {
+    const response = await fetch(`/api/templates/${templateId}`, {
+      method: 'DELETE'
+    });
+    
+    const result = await response.json();
+    if (response.ok) {
+      window.currentFOTemplateId = null;
+      showToast('F&O template deleted successfully!', 'success');
+      toggleFOButtons(false);
+    } else {
+      showToast('Failed to delete F&O template: ' + (result.error || 'Unknown error'), 'error');
+    }
+  } catch (error) {
+    showToast('Network error: ' + error.message, 'error');
+  }
+};
+
+// Reset F&O split table function
+window.resetFOSplitTable = function() {
+  const splitTableBody = document.getElementById('splitTableBody');
+  const appliedSplitTable = document.getElementById('appliedSplitTable');
+  
+  if (splitTableBody) {
+    splitTableBody.innerHTML = '';
+  }
+  if (appliedSplitTable) {
+    appliedSplitTable.classList.add('hidden');
+  }
+  
+  splitParts = [];
+  currentSplitMode = 'full';
+  document.getElementById('splitMode').value = 'full';
+  
+  showToast('F&O split table reset successfully!', 'info');
+};
+
+function markUnsavedChanges() {
+  const indicator = document.getElementById('unsavedIndicator');
+  if (indicator) {
+    indicator.classList.remove('hidden');
+  }
+}
+
+function clearUnsavedChanges() {
+  const indicator = document.getElementById('unsavedIndicator');
+  if (indicator) {
+    indicator.classList.add('hidden');
+  }
+}
+
+// Toggle F&O button visibility
+function toggleFOButtons(saved) {
+  document.getElementById('resetSplitBtn').style.display = saved ? 'none' : 'inline-block';
+  document.getElementById('deleteTemplateBtn').style.display = saved ? 'inline-block' : 'none';
+}
+
+// Load F&O templates on page load
+async function loadFOTemplates() {
+  const instrument = tradeData.derivative_name || tradeData.symbol || 'UNKNOWN';
+  const strike = null;
+  
+  try {
+    const response = await fetch(`/api/templates?instrument=${encodeURIComponent(instrument)}&t=${Date.now()}`);
+    if (!response.ok) {
+      toggleFOButtons(false);
+      return;
+    }
+    
+    const templates = await response.json();
+    if (templates.length > 0) {
+      const template = templates[0];
+      window.currentFOTemplateId = template.id;
+      
+      const payload = template.payload;
+      if (payload.split_mode) {
+        currentSplitMode = payload.split_mode;
+        document.getElementById('splitMode').value = payload.split_mode;
+      }
+      if (payload.split_parts) {
+        splitParts = payload.split_parts;
+      }
+      
+      updateFOSplitPreview();
+      
+      if (payload.table_data && payload.table_data.length > 0) {
+        const splitTableBody = document.getElementById('splitTableBody');
+        if (splitTableBody) {
+          splitTableBody.innerHTML = payload.table_data.map(row => `
+            <tr>
+              <td>${row.preview}</td>
+              <td>${row.sl}</td>
+              <td>${row.target}</td>
+              <td>${row.lots}</td>
+              <td>${row.qty}</td>
+              <td><button class="split-action-btn" onclick="editFOSplitPart(${row.lots}, ${row.lots}, ${row.qty})">Edit</button></td>
+            </tr>
+          `).join('');
+          
+          document.getElementById('appliedSplitTable').classList.remove('hidden');
+        }
+      }
+      
+      toggleFOButtons(true);
+    } else {
+      toggleFOButtons(false);
+    }
+  } catch (error) {
+    toggleFOButtons(false);
+  }
+}
+
+// Setup F&O split event listeners
+document.getElementById('splitMode')?.addEventListener('change', handleFOSplitModeChange);
+document.getElementById('customSplitInput')?.addEventListener('input', validateFOCustomSplit);
+
+/* ---------- Update/Close buttons ---------- */
+document.getElementById('updateBtn').addEventListener('click', showConfirmModal);
+document.getElementById('closeBtn').addEventListener('click', ()=>{
+  const closeBtn = document.getElementById('closeBtn');
+  if (closeBtn.textContent === 'Reopen Position' || tradeData.status === 'closed') {
+    if (confirm('Do you want to reopen this F&O position?')) {
+      reopenPosition();
+    }
+  } else {
+    if (confirm('Are you sure you want to close this F&O position?')) {
+      closePosition();
+    }
+  }
+});
+
+function showConfirmModal() {
+  document.getElementById('confirmModal').style.display = 'flex';
+}
+
+document.getElementById('confirmYes').addEventListener('click', () => {
+  document.getElementById('confirmModal').style.display = 'none';
+  savePositionUpdate();
+});
+document.getElementById('confirmNo').addEventListener('click', () => {
+  document.getElementById('confirmModal').style.display = 'none';
+});
+
+async function savePositionUpdate() {
+  const avgPrice = parseFloat(document.getElementById('inpAvgPrice').value);
+  const quantity = parseInt(document.getElementById('inpQty').value);
+  const stopLoss = parseFloat(document.getElementById('inpSL').value);
+  const target = parseFloat(document.getElementById('inpTarget').value);
+  
+  const updateData = {
+    trade_id: tradeData.id,
+    avg_price: avgPrice,
+    quantity: quantity,
+    stop_loss_price: stopLoss,
+    target_price: target
+  };
+  
+  try {
+    const response = await fetch('/save_fno_update', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(updateData)
+    });
+    
+    const result = await response.json();
+    
+    if (result.success) {
+      updatePositionUI(result.trade);
+      showToast('F&O position updated successfully!', 'success');
+    } else {
+      showToast('Error: ' + result.error, 'error');
+    }
+  } catch (error) {
+    showToast('Network error: ' + error.message, 'error');
+  }
+}
+
+async function closePosition() {
+  try {
+    const response = await fetch('/close_fno_position', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ trade_id: tradeData.id })
+    });
+    
+    const result = await response.json();
+    
+    if (result.success) {
+      showToast('F&O POSITION CLOSED', 'success');
+      
+      // Update UI to show closed status
+      const header = document.querySelector('header');
+      if (header) {
+        const closedBadge = document.createElement('div');
+        closedBadge.style.cssText = `
+          position: absolute;
+          top: 10px;
+          right: 10px;
+          background: rgba(255, 59, 48, 0.9);
+          color: white;
+          padding: 8px 16px;
+          border-radius: 20px;
+          font-weight: bold;
+          font-size: 14px;
+          z-index: 1000;
+        `;
+        closedBadge.textContent = 'POSITION CLOSED';
+        header.style.position = 'relative';
+        header.appendChild(closedBadge);
+      }
+      
+      // Disable all input fields and buttons except close button
+      const inputs = document.querySelectorAll('input, button, select');
+      inputs.forEach(input => {
+        if (input.id !== 'backToManual' && input.id !== 'closeBtn') {
+          input.disabled = true;
+          input.style.opacity = '0.5';
+        }
+      });
+      
+      tradeData.status = 'closed';
+      const closeBtn = document.getElementById('closeBtn');
+      closeBtn.textContent = 'Reopen Position';
+      closeBtn.className = 'btn-ai';
+      
+    } else {
+      showToast('Error: ' + result.error, 'error');
+    }
+  } catch (error) {
+    showToast('Network error: ' + error.message, 'error');
+  }
+}
+
+async function reopenPosition() {
+  try {
+    const response = await fetch('/reopen_fno_position', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ trade_id: tradeData.id })
+    });
+    
+    const result = await response.json();
+    
+    if (result.success) {
+      showToast('F&O position reopened successfully!', 'success');
+      
+      // Remove closed badge
+      const closedBadge = document.querySelector('header div[style*="POSITION CLOSED"]');
+      if (closedBadge) closedBadge.remove();
+      
+      // Enable all inputs
+      const inputs = document.querySelectorAll('input, button, select');
+      inputs.forEach(input => {
+        input.disabled = false;
+        input.style.opacity = '1';
+      });
+      
+      tradeData.status = 'open';
+      const closeBtn = document.getElementById('closeBtn');
+      closeBtn.textContent = 'Close Position';
+      closeBtn.className = 'btn-sell';
+    } else {
+      showToast('Error: ' + result.error, 'error');
+    }
+  } catch (error) {
+    showToast('Network error: ' + error.message, 'error');
+  }
+}
+
+function updatePositionUI(trade) {
+  document.getElementById('ts-capital').innerHTML = `₹${trade.capital_used.toLocaleString()}<span class="no-leverage-badge">No Leverage</span>`;
+  document.getElementById('ts-rr').textContent = `1:${trade.rr_ratio}`;
+  document.getElementById('ts-profit').textContent = `${trade.expected_return}%`;
+  document.getElementById('ts-risk').textContent = `${trade.risk_percent}%`;
+  
+  document.getElementById('inpAvgPrice').value = trade.avg_price;
+  document.getElementById('inpQty').value = trade.quantity;
+  document.getElementById('inpSL').value = trade.stop_loss_price;
+  document.getElementById('inpTarget').value = trade.target_price;
+  
+  Object.assign(tradeData, trade);
+  
+  // Update risk calculator if visible
+  if (typeof updateRiskCalculations === 'function') {
+    updateRiskCalculations();
+  }
+}
+
+/* ================== F&O AI EXIT PLANNER ENGINE ================== */
+const $ = (id)=>document.getElementById(id);
+const log = (msg)=>{ const t = new Date().toLocaleTimeString(); $('ailog').insertAdjacentHTML('beforeend', `<div><span style="color:#6ea9ff">[${t}]</span> ${msg}</div>`); $('ailog').scrollTop = $('ailog').scrollHeight; }
+const format = (n, d=2)=> Number(n).toFixed(d);
+
+// F&O specific helpers - no leverage for F&O
+function foMove(entry, pct){ return entry * (pct/100); }
+function priceFromPct(entry, pct, side){
+  // side: 'buy' => profit up, 'sell' => profit down
+  return side === 'buy' ? entry + foMove(entry, pct)
+                        : entry - foMove(entry, pct);
+}
+
+function getFORuleSet(lots) {
+  if (lots <= 2) {
+    return {
+      name: 'Small F&O',
+      slPercent: 1.5,
+      exits: [{ percent: 3.0, allocation: 100 }]
+    };
+  } else if (lots <= 5) {
+    return {
+      name: 'Medium F&O',
+      slPercent: 1.5,
+      exits: [{ percent: 2.0, allocation: 40 }, { percent: 4.0, allocation: 60 }]
+    };
+  } else {
+    return {
+      name: 'Large F&O',
+      slPercent: 1.0,
+      exits: [{ percent: 1.5, allocation: 30 }, { percent: 3.0, allocation: 40 }, { percent: 5.0, allocation: 30 }]
+    };
+  }
+}
+
+function getEntryAndLots(){
+  const e = parseFloat(document.getElementById('inpAvgPrice').value);
+  const q = parseInt(document.getElementById('inpQty').value,10);
+  const lotSize = tradeData.lot_size || 25;
+  const lots = Math.floor(q / lotSize) || 1;
+  return {entry:e, quantity:q, lots:lots, lotSize:lotSize};
+}
+
+async function makeFOPlan(){
+  const {entry, quantity, lots, lotSize} = getEntryAndLots();
+  
+  if(!(entry>0 && quantity>0)){
+    showToast('Please enter a valid Average Price and Quantity in the Position Management section.', 'error');
+    return;
+  }
+
+  // Show AI thinking animation
+  $('ailog').innerHTML = '';
+  $('plan').innerHTML = '<div style="text-align:center;padding:20px;color:#8f94fb;"><i class="fas fa-brain" style="animation:brain-pulse 1.5s infinite;"></i><br>AI is analyzing your F&O entry, lot size, and volatility bands...</div>';
+  
+  log('AI is analyzing your F&O entry, lot size, and volatility bands...');
+  await new Promise(resolve => setTimeout(resolve, 1200));
+  
+  $('plan').innerHTML = '<div style="text-align:center;padding:20px;color:#8f94fb;"><i class="fas fa-brain" style="animation:brain-pulse 1.5s infinite;"></i><br>AI is preparing your personalized F&O exit strategy...</div>';
+  log('AI is preparing your personalized F&O exit strategy...');
+  await new Promise(resolve => setTimeout(resolve, 1300));
+  
+  log('Parsing F&O inputs…');
+  setTimeout(()=>log(`Entry ₹${format(entry)} | Lots ${lots} (${quantity} qty)`), 200);
+  
+  // Determine rule set based on lot count
+  const ruleSet = getFORuleSet(lots);
+  setTimeout(()=>log(`Applied ${ruleSet.name} rule set`), 400);
+
+  const side = (tradeData.tradeType==='buy') ? 'buy' : 'sell';
+  const trigSign = side==='buy' ? '+' : '-';
+  const slSign   = side==='buy' ? '-' : '+';
+  
+  // Calculate SL price (direct percentage move for F&O)
+  const slPrice = side==='buy'
+    ? entry - foMove(entry, ruleSet.slPercent)
+    : entry + foMove(entry, ruleSet.slPercent);
+  
+  // Calculate exit quantities and prices
+  let remainingQty = quantity;
+  const exits = [];
+  
+  for (let i = 0; i < ruleSet.exits.length; i++) {
+    const exit = ruleSet.exits[i];
+    const exitQty = Math.floor(quantity * (exit.allocation / 100));
+    const exitPrice = priceFromPct(entry, exit.percent, side);
+    
+    exits.push({
+      index: i+1,
+      percent: exit.percent,
+      qty: exitQty,
+      price: exitPrice,
+      allocation: exit.allocation
+    });
+    
+    remainingQty -= exitQty;
+  }
+  
+  // Handle any remaining quantity from rounding
+  if (remainingQty > 0 && exits.length > 0) {
+    exits[exits.length-1].qty += remainingQty;
+  }
+  
+  aiPlanData = {ruleSet, entry, quantity, lots, lotSize, slPrice, slPercent: ruleSet.slPercent, exits, side, trigSign, slSign};
+
+  // Generate plan HTML
+  let planHTML = `
+    <table aria-label="F&O Exit Plan">
+      <thead>
+        <tr>
+          <th>Leg</th>
+          <th>Trigger</th>
+          <th>Qty</th>
+          <th>Exit Price</th>
+          <th>Value</th>
+          <th>Intent</th>
+        </tr>
+      </thead>
+      <tbody>
+  `;
+  
+  exits.forEach((exit, index) => {
+    planHTML += `
+        <tr>
+          <td>Exit-${exit.index}</td>
+          <td>${trigSign}${format(exit.percent,1)}%</td>
+          <td>${exit.qty} (${exit.allocation}%)</td>
+          <td>₹${format(exit.price)}</td>
+          <td>₹${format(exit.price * exit.qty)}</td>
+          <td><span class="pill ${index === 0 ? 'warn' : 'good'}">${index === 0 ? 'Recover Cost' : 'Lock Profit'}</span></td>
+        </tr>
+    `;
+  });
+  
+  planHTML += `
+        <tr>
+          <td>Stop Loss</td>
+          <td>${slSign}${format(ruleSet.slPercent,1)}%</td>
+          <td>${quantity}</td>
+          <td>₹${format(slPrice)}</td>
+          <td>₹${format(slPrice * quantity)}</td>
+          <td><span class="pill" style="background:rgba(255,59,48,.2);color:#ff3b30;border:1px solid rgba(255,59,48,.3)">Risk Management</span></td>
+        </tr>
+      </tbody>
+    </table>
+    <div class="actions" style="margin-top:8px;gap:8px;justify-content:flex-start">
+      <button class="tiny-link" id="copyPlan">Copy F&O Plan</button>
+      <button class="tiny-link" id="copyLevels">Copy Levels Only</button>
+    </div>
+  `;
+
+  // Show plan after delay
+  setTimeout(() => {
+    $('plan').innerHTML = planHTML;
+    attachCopyHandlers(aiPlanData);
+    log('AI F&O exit strategy generated successfully!');
+  }, 300);
+
+  // Log details
+  setTimeout(()=>log(`Stop Loss set @ ₹${format(slPrice)} (${slSign}${ruleSet.slPercent}%)`), 600);
+  
+  exits.forEach((exit, index) => {
+    setTimeout(()=>log(`Exit-${exit.index} set @ ₹${format(exit.price)} (${trigSign}${exit.percent}%) for ${exit.qty} qty (${exit.allocation}%)`), 800 + index * 200);
+  });
+}
+
+function attachCopyHandlers(planData){
+  const { trigSign, slSign } = planData;
+
+  let planStr = `AI F&O Exit Plan (${planData.ruleSet.name} Rule Set)\n` +
+                `Entry: ₹${format(planData.entry)}\n` +
+                `Lots: ${planData.lots} (${planData.quantity} qty)\n` +
+                `Stop Loss: ${slSign}${planData.slPercent}% → ₹${format(planData.slPrice)}\n\n`;
+  
+  planData.exits.forEach(exit => {
+    planStr += `Exit-${exit.index}: ${trigSign}${exit.percent}% → ₹${format(exit.price)} (Qty ${exit.qty}, ${exit.allocation}%)\n`;
+  });
+  
+  let levelsStr = `SL: ₹${format(planData.slPrice)} | `;
+  planData.exits.forEach(exit => {
+    levelsStr += `Exit-${exit.index}: ₹${format(exit.price)} | `;
+  });
+  levelsStr = levelsStr.slice(0, -3);
+  
+  const cp = (txt)=>navigator.clipboard?.writeText(txt);
+  const btn1 = document.getElementById('copyPlan');
+  const btn2 = document.getElementById('copyLevels');
+  btn1?.addEventListener('click', ()=>{cp(planStr);log('F&O Plan copied to clipboard.');});
+  btn2?.addEventListener('click', ()=>{cp(levelsStr);log('F&O Levels copied to clipboard.');});
+}
+
+// Save AI plan as template
+$('btnSavePlan')?.addEventListener('click', async function() {
+  if (!aiPlanData) {
+    showToast('Please generate an AI F&O plan first.', 'error');
+    return;
+  }
+  
+  const instrument = tradeData.derivative_name || tradeData.symbol || 'UNKNOWN';
+  const strike = null;
+  
+  const planPayload = {
+    ...aiPlanData,
+    timestamp: new Date().toISOString()
+  };
+  
+  try {
+    const response = await fetch('/api/ai_plans', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ instrument, strike, payload: planPayload })
+    });
+    
+    const result = await response.json();
+    if (response.ok && result.template_id) {
+      window.currentAIPlanId = result.template_id;
+      showToast('AI F&O Plan saved as template!', 'success');
+      log('AI F&O plan saved as template.');
+    } else {
+      showToast('Failed to save AI F&O plan: ' + (result.error || 'Unknown error'), 'error');
+    }
+  } catch (error) {
+    showToast('Network error: ' + error.message, 'error');
+  }
+});
+
+$('btnPlan')?.addEventListener('click', makeFOPlan);
+
+// View saved plans
+$('btnViewPlans')?.addEventListener('click', async function() {
+  const instrument = tradeData.derivative_name || tradeData.symbol || 'UNKNOWN';
+  
+  try {
+    const response = await fetch(`/api/ai_plans?instrument=${encodeURIComponent(instrument)}&t=${Date.now()}`);
+    if (!response.ok) {
+      showToast('Failed to load saved F&O plans', 'error');
+      return;
+    }
+    
+    const plans = await response.json();
+    if (plans.length === 0) {
+      showToast('No saved F&O plans found for this instrument', 'info');
+      return;
+    }
+    
+    const latestPlan = plans[0];
+    aiPlanData = latestPlan.payload;
+    
+    // Recreate the plan HTML
+    let planHTML = `
+      <div style="margin-bottom:10px;color:#8f94fb;font-size:12px;">Loaded saved F&O plan from ${new Date(latestPlan.created_at).toLocaleString()}</div>
+      <table aria-label="F&O Exit Plan">
+        <thead>
+          <tr>
+            <th>Leg</th>
+            <th>Trigger</th>
+            <th>Qty</th>
+            <th>Exit Price</th>
+            <th>Value</th>
+            <th>Intent</th>
+          </tr>
+        </thead>
+        <tbody>
+    `;
+    
+    aiPlanData.exits.forEach((exit, index) => {
+      planHTML += `
+          <tr>
+            <td>Exit-${exit.index}</td>
+            <td>${aiPlanData.trigSign}${format(exit.percent,1)}%</td>
+            <td>${exit.qty} (${exit.allocation}%)</td>
+            <td>₹${format(exit.price)}</td>
+            <td>₹${format(exit.price * exit.qty)}</td>
+            <td><span class="pill ${index === 0 ? 'warn' : 'good'}">${index === 0 ? 'Recover Cost' : 'Lock Profit'}</span></td>
+          </tr>
+      `;
+    });
+    
+    planHTML += `
+          <tr>
+            <td>Stop Loss</td>
+            <td>${aiPlanData.slSign}${format(aiPlanData.slPercent,1)}%</td>
+            <td>${aiPlanData.quantity}</td>
+            <td>₹${format(aiPlanData.slPrice)}</td>
+            <td>₹${format(aiPlanData.slPrice * aiPlanData.quantity)}</td>
+            <td><span class="pill" style="background:rgba(255,59,48,.2);color:#ff3b30;border:1px solid rgba(255,59,48,.3)">Risk Management</span></td>
+          </tr>
+        </tbody>
+      </table>
+      <div class="actions" style="margin-top:8px;gap:8px;justify-content:flex-start">
+        <button class="tiny-link" id="copyPlan">Copy F&O Plan</button>
+        <button class="tiny-link" id="copyLevels">Copy Levels Only</button>
+      </div>
+    `;
+    
+    $('plan').innerHTML = planHTML;
+    attachCopyHandlers(aiPlanData);
+    
+    showToast('Saved F&O plan loaded successfully!', 'success');
+    log('Loaded saved AI F&O plan from ' + new Date(latestPlan.created_at).toLocaleString());
+    
+  } catch (error) {
+    showToast('Error loading saved F&O plans: ' + error.message, 'error');
+  }
+});
+
+$('btnReset')?.addEventListener('click', ()=>{
+  $('ailog').innerHTML='';
+  $('plan').innerHTML = '<p style="color:#aaa">Click <b>Generate AI F&O Plan</b>. The exits will appear here based on lot size.</p>';
+  aiPlanData = null;
+});
+
+function copyTradeDetails() {
+  const details = `F&O Trade Details
+Derivative: ${tradeData.derivative_name}
+Trade Type: ${tradeData.tradeType.toUpperCase()}
+Average Price: ₹${tradeData.avgPrice}
+Quantity: ${tradeData.quantity}
+Lot Size: ${tradeData.lot_size}
+Stop Loss: ₹${tradeData.stopLoss}
+Target: ₹${tradeData.target}
+Capital Used: ₹${tradeData.capital_used} (No Leverage)
+Expected Profit: ₹${tradeData.total_reward}
+Maximum Risk: ₹${tradeData.total_risk}
+Risk-Reward Ratio: 1:${tradeData.rr_ratio}`;
+
+  navigator.clipboard.writeText(details).then(() => {
+    showToast('F&O trade details copied to clipboard!', 'success');
+  });
+}
+
+async function addToJournal() {
+  try {
+    const response = await fetch('/add_fno_to_journal', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ trade_id: tradeData.id })
+    });
+    
+    const result = await response.json();
+    
+    if (result.success) {
+      showToast(result.message, 'success');
+    } else {
+      showToast('Error: ' + result.error, 'error');
+    }
+  } catch (error) {
+    showToast('Network error: ' + error.message, 'error');
+  }
+}
+
+/* ================== F&O ADVANCED RISK CALCULATOR ================== */
+// F&O Risk calculator state
+let foRiskCalcState = {
+  capital: parseFloat("{{ (trade.capital_used * 5) or 500000 }}"),
+  riskPercent: 1.5,
+  expectedReturn: 3,
+  lots: parseInt("{{ (trade.quantity // (trade.lot_size or 25)) or 1 }}"),
+  entryPrice: parseFloat("{{ '%.2f'|format(trade.avg_price) }}"),
+  lotSize: parseInt("{{ trade.lot_size or 25 }}")
+};
+
+// Sync slider and input pairs
+function syncSliderInput(sliderId, inputId) {
+  const slider = document.getElementById(sliderId);
+  const input = document.getElementById(inputId);
+  
+  if (!slider || !input) return;
+  
+  slider.addEventListener('input', () => {
+    input.value = slider.value;
+    updateRiskCalculations();
+  });
+  
+  input.addEventListener('input', () => {
+    slider.value = input.value;
+    updateRiskCalculations();
+  });
+}
+
+// Update risk badge and heat meter
+function updateRiskBadge(riskPercent) {
+  const badge = document.getElementById('risk-badge');
+  const heatBar = document.getElementById('heat-bar');
+  
+  if (!badge || !heatBar) return;
+  
+  let category, position;
+  if (riskPercent <= 1) {
+    category = 'conservative';
+    badge.textContent = 'Conservative';
+    position = (riskPercent / 1) * 33;
+  } else if (riskPercent <= 2.5) {
+    category = 'balanced';
+    badge.textContent = 'Balanced';
+    position = 33 + ((riskPercent - 1) / 1.5) * 34;
+  } else {
+    category = 'aggressive';
+    badge.textContent = 'Aggressive';
+    position = 67 + Math.min(((riskPercent - 2.5) / 2.5) * 33, 33);
+  }
+  
+  badge.className = `risk-badge ${category}`;
+  heatBar.style.setProperty('--heat-position', `${position}%`);
+}
+
+// Live calculation updates for F&O
+function updateRiskCalculations() {
+  const capital = parseFloat(document.getElementById('capital-input')?.value) || 0;
+  const riskPercent = parseFloat(document.getElementById('risk-input')?.value) || 0;
+  const expectedReturn = parseFloat(document.getElementById('return-input')?.value) || 0;
+  const lots = parseInt(document.getElementById('lots-input')?.value) || 0;
+  const entryPrice = foRiskCalcState.entryPrice;
+  const lotSize = foRiskCalcState.lotSize;
+  
+  // Update state
+  foRiskCalcState = { capital, riskPercent, expectedReturn, lots, entryPrice, lotSize };
+  
+  // Update risk badge and heat meter
+  updateRiskBadge(riskPercent);
+  
+  // Calculate F&O position metrics (no leverage for F&O)
+  const quantity = lots * lotSize;
+  const positionValue = entryPrice * quantity;
+  const marginUsed = positionValue; // F&O uses full position value as margin
+  const riskAmount = capital * (riskPercent / 100);
+  
+  // Calculate prices based on direct percentage moves
+  const riskMove = entryPrice * (riskPercent / 100);
+  const returnMove = entryPrice * (expectedReturn / 100);
+  
+  const stopLossPrice = tradeData.tradeType === 'buy' 
+    ? entryPrice - riskMove 
+    : entryPrice + riskMove;
+    
+  const targetPrice = tradeData.tradeType === 'buy'
+    ? entryPrice + returnMove
+    : entryPrice - returnMove;
+  
+  const expectedProfit = positionValue * (expectedReturn / 100);
+  const rrRatio = expectedReturn / riskPercent;
+  
+  // Update summary dashboard
+  const elements = {
+    'position-value': `₹${positionValue.toLocaleString()}`,
+    'margin-used': `₹${marginUsed.toLocaleString()}`,
+    'risk-amount': `₹${riskAmount.toLocaleString()}`,
+    'expected-profit': `₹${expectedProfit.toLocaleString()}`,
+    'rr-ratio': `1:${rrRatio.toFixed(2)}`,
+    'target-price': `₹${targetPrice.toFixed(2)}`,
+    'stop-loss-price': `₹${stopLossPrice.toFixed(2)}`
+  };
+  
+  Object.entries(elements).forEach(([id, value]) => {
+    const element = document.getElementById(id);
+    if (element) element.textContent = value;
+  });
+  
+  // Update color coding based on risk level
+  const rrElement = document.getElementById('rr-ratio');
+  if (rrElement) {
+    if (rrRatio >= 3) {
+      rrElement.style.color = '#4cd964';
+    } else if (rrRatio >= 2) {
+      rrElement.style.color = '#ffcc00';
+    } else {
+      rrElement.style.color = '#ff3b30';
+    }
+  }
+}
+
+// Preset risk buttons
+function setupPresetButtons() {
+  document.querySelectorAll('.preset-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const riskValue = parseFloat(btn.dataset.risk);
+      
+      // Update sliders and inputs
+      const riskSlider = document.getElementById('risk-slider');
+      const riskInput = document.getElementById('risk-input');
+      const returnSlider = document.getElementById('return-slider');
+      const returnInput = document.getElementById('return-input');
+      
+      if (riskSlider && riskInput) {
+        riskSlider.value = riskValue;
+        riskInput.value = riskValue;
+      }
+      
+      // Set corresponding expected return for F&O
+      const returnValue = riskValue * 2; // 2x risk as return for F&O
+      if (returnSlider && returnInput) {
+        returnSlider.value = returnValue;
+        returnInput.value = returnValue;
+      }
+      
+      // Update active state
+      document.querySelectorAll('.preset-btn').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      
+      updateRiskCalculations();
+    });
+  });
+}
+
+// Initialize F&O risk calculator
+function initRiskCalculator() {
+  // Setup slider-input synchronization
+  syncSliderInput('capital-slider', 'capital-input');
+  syncSliderInput('risk-slider', 'risk-input');
+  syncSliderInput('return-slider', 'return-input');
+  syncSliderInput('lots-slider', 'lots-input');
+  
+  // Setup preset buttons
+  setupPresetButtons();
+  
+  // Add CSS for heat bar animation
+  const style = document.createElement('style');
+  style.textContent = `
+    .heat-bar::after {
+      content: '';
+      position: absolute;
+      top: -2px;
+      bottom: -2px;
+      width: 4px;
+      background: #fff;
+      border-radius: 2px;
+      box-shadow: 0 0 8px rgba(255,255,255,0.8);
+      transition: left 0.3s ease;
+      left: calc(var(--heat-position, 20%) - 2px);
+    }
+  `;
+  document.head.appendChild(style);
+  
+  // Initial calculation
+  updateRiskCalculations();
+  
+  // Set default preset as active
+  const defaultPreset = document.querySelector('[data-risk="1.5"]');
+  if (defaultPreset) defaultPreset.classList.add('active');
+}
+
+// Toast notification function
+function showToast(message, type = 'info') {
+  const toast = document.createElement('div');
+  toast.className = `toast toast-${type}`;
+  toast.textContent = message;
+  document.body.appendChild(toast);
+  
+  setTimeout(() => {
+    if (toast.parentNode) {
+      toast.parentNode.removeChild(toast);
+    }
+  }, 3000);
+}
+
+/* ---------- Init ---------- */
+(async function init(){
+  // Start in AI mode by default
+  modeSelect.value = 'ai';
+  modeSelect.dispatchEvent(new Event('change'));
+  
+  // Initialize advanced F&O risk calculator
+  initRiskCalculator();
+  
+  // Initialize F&O split preview
+  updateFOSplitPreview();
+  
+  // Initialize split editor
+  initSplitEditor();
+  
+  // Load existing F&O templates
+  await loadFOTemplates();
+  
+  // Check if position is closed and disable inputs
+  if (tradeData.status === 'closed') {
+    const inputs = document.querySelectorAll('input, button, select');
+    inputs.forEach(input => {
+      if (input.id !== 'backToManual' && input.id !== 'closeBtn') {
+        input.disabled = true;
+        input.style.opacity = '0.5';
+      }
+    });
+    
+    // Update close button for reopening
+    const closeBtn = document.getElementById('closeBtn');
+    closeBtn.textContent = 'Reopen Position';
+    closeBtn.className = 'btn-ai';
+  }
+})();
+</script>
+
+</body>
+</html>

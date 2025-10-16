@@ -1,0 +1,442 @@
+{% extends 'simple_base.html' %}
+
+{% block content %}
+<style>
+  @import url('https://fonts.googleapis.com/css?family=Poppins:400,500,600,700&display=swap');
+
+  .auth-page *{
+    box-sizing: border-box;
+    font-family: 'Poppins', sans-serif;
+  }
+
+  .auth-page{
+    min-height: 70vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .auth-page .wrapper{
+    position: relative;
+    max-width: 430px;
+    width: 100%;
+    background: #fff;
+    padding: 34px;
+    border-radius: 6px;
+    box-shadow: 0 10px 25px rgba(0,0,0,0.1);
+  }
+
+  .auth-page .wrapper h2{
+    font-size: 28px;
+    font-weight: 600;
+    color: #333;
+    margin-bottom: 20px;
+  }
+
+  .auth-page .input-box{
+    height: 52px;
+    margin: 18px 0;
+  }
+
+  .auth-page .input-box input{
+    height: 100%;
+    width: 100%;
+    outline: none;
+    padding: 0 15px;
+    border: 1.5px solid #C7BEBE;
+    border-bottom-width: 2px;
+    border-radius: 6px;
+    transition: all 0.3s ease;
+    font-size: 15px;
+  }
+
+  .auth-page .input-box input:focus,
+  .auth-page .input-box input:valid{
+    border-color: #4070f4;
+  }
+
+  .auth-page .input-box.button{
+    margin-top: 24px;
+  }
+
+  .auth-page .input-box.button input{
+    color: #fff;
+    letter-spacing: 0.5px;
+    border: none;
+    background: #4070f4;
+    cursor: pointer;
+    font-weight: 600;
+    transition: background 0.3s ease, transform 0.05s ease;
+  }
+
+  .auth-page .input-box.button input:hover{
+    background: #275df2;
+  }
+
+  .auth-page .input-box.button input:active{
+    transform: translateY(1px);
+  }
+
+  .auth-page .text{
+    text-align: center;
+    margin-top: 16px;
+  }
+
+  .auth-page .text h3{
+    color: #333;
+    font-weight: 500;
+    font-size: 14px;
+  }
+
+  .auth-page .text h3 a{
+    color: #4070f4;
+    text-decoration: none;
+    font-weight: 600;
+  }
+
+  .auth-page .text h3 a:hover{
+    text-decoration: underline;
+  }
+
+  /* Validation helpers */
+  .helper {
+    margin-top: 8px;
+    font-size: 13px;
+    color: #555;
+    line-height: 1.4;
+  }
+  .helper ul {
+    margin: 8px 0 0;
+    padding-left: 18px;
+  }
+  .helper li.valid {
+    color: #1aa14b; /* green */
+  }
+  .helper li.invalid {
+    color: #d93025; /* red */
+  }
+
+  .error-text{
+    color: #d93025;
+    font-size: 12px;
+    margin-top: 6px;
+  }
+
+  .hidden{ display: none; }
+
+  /* Optional general server error banner */
+  .server-error-banner{
+    background: #fdecea;
+    color: #b3261e;
+    border: 1px solid #f5c6cb;
+    border-radius: 6px;
+    padding: 10px 12px;
+    margin-bottom: 10px;
+    font-size: 13px;
+  }
+
+  /* Google Sign-in Button */
+  .google-btn {
+    width: 100%;
+    height: 52px;
+    background: #fff;
+    border: 1.5px solid #dadce0;
+    border-radius: 6px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    text-decoration: none;
+    color: #3c4043;
+    font-weight: 500;
+    font-size: 14px;
+    margin: 16px 0;
+    transition: all 0.3s ease;
+  }
+
+  .google-btn:hover {
+    box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+    border-color: #dadce0;
+    text-decoration: none;
+    color: #3c4043;
+  }
+
+  .google-btn img {
+    width: 20px;
+    height: 20px;
+    margin-right: 12px;
+  }
+
+  .divider {
+    text-align: center;
+    margin: 20px 0;
+    position: relative;
+    color: #5f6368;
+    font-size: 14px;
+  }
+
+  .divider::before {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 0;
+    right: 0;
+    height: 1px;
+    background: #dadce0;
+  }
+
+  .divider span {
+    background: #fff;
+    padding: 0 16px;
+  }
+</style>
+
+<div class="auth-page">
+  <div class="wrapper">
+    <h2>Register</h2>
+
+    {# Optional: non-AJAX server error (if your server renders it) #}
+    {% if server_error %}
+      <div class="server-error-banner">{{ server_error }}</div>
+    {% endif %}
+
+    <!-- Google Sign-in Button -->
+    <a href="{{ url_for('google_login') }}" class="google-btn">
+      <svg width="20" height="20" viewBox="0 0 24 24">
+        <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
+        <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
+        <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/>
+        <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/>
+      </svg>
+      Continue with Google
+    </a>
+
+    <div class="divider">
+      <span>or</span>
+    </div>
+
+    <form id="registerForm" method="POST" action="">
+      <div class="input-box">
+        <input type="email" name="email" id="email" placeholder="Enter your Gmail address" required>
+        <div id="emailError" class="error-text hidden"></div>
+      </div>
+
+      <div class="input-box">
+        <input type="password" name="password" id="password" placeholder="Create password" required>
+        <div id="passwordError" class="error-text hidden"></div>
+      </div>
+
+      <div class="input-box">
+        <input type="password" name="confirm_password" id="confirm_password" placeholder="Confirm password" required>
+        <div id="confirmError" class="error-text hidden"></div>
+      </div>
+
+      <div class="input-box">
+        <input type="text" name="coupon" id="coupon" placeholder="Coupon code (optional)">
+      </div>
+
+      <div class="input-box button">
+        <input type="submit" value="Register" id="submitBtn">
+      </div>
+    </form>
+
+    <!-- Password guidelines: hidden by default; only shown when password fails rules -->
+    <div id="guidelines" class="helper hidden" aria-live="polite">
+      Password should:
+      <ul id="pwGuidelines">
+        <li id="g-len" class="invalid">Be at least 8 characters</li>
+        <li id="g-upper" class="invalid">Include at least 1 uppercase letter (A-Z)</li>
+        <li id="g-lower" class="invalid">Include at least 1 lowercase letter (a-z)</li>
+        <li id="g-digit" class="invalid">Include at least 1 number (0-9)</li>
+        <li id="g-special" class="invalid">Include at least 1 special character (!@#$%^&* etc.)</li>
+        <li id="g-match" class="invalid">Match the confirm password</li>
+      </ul>
+    </div>
+
+    <div class="text">
+      <h3>Already have an account? <a href="/login">Login now</a></h3>
+    </div>
+  </div>
+</div>
+
+<script>
+  // Client-side validation for Gmail, password rules, and confirm match
+  (function () {
+    const form = document.getElementById('registerForm');
+    const submitBtn = document.getElementById('submitBtn');
+
+    const email = document.getElementById('email');
+    const password = document.getElementById('password');
+    const confirmPassword = document.getElementById('confirm_password');
+
+    const emailError = document.getElementById('emailError');
+    const passwordError = document.getElementById('passwordError');
+    const confirmError = document.getElementById('confirmError');
+
+    const guidelines = document.getElementById('guidelines');
+    const gLen = document.getElementById('g-len');
+    const gUpper = document.getElementById('g-upper');
+    const gLower = document.getElementById('g-lower');
+    const gDigit = document.getElementById('g-digit');
+    const gSpecial = document.getElementById('g-special');
+    const gMatch = document.getElementById('g-match');
+
+    // Regex patterns for rules
+    const reUpper = /[A-Z]/;
+    const reLower = /[a-z]/;
+    const reDigit = /[0-9]/;
+    const reSpecial = /[^A-Za-z0-9]/;
+
+    // Require a proper Gmail address (case-insensitive)
+    const reGmail = /^[A-Z0-9._%+-]+@gmail\.com$/i;
+
+    function setState(el, ok){
+      el.classList.toggle('valid', ok);
+      el.classList.toggle('invalid', !ok);
+    }
+
+    function validateGmail(){
+      emailError.textContent = '';
+      emailError.classList.add('hidden');
+      const val = (email.value || '').trim();
+      const ok = reGmail.test(val);
+      if (!ok){
+        emailError.textContent = 'Please enter a valid Gmail address (e.g., name@gmail.com).';
+        emailError.classList.remove('hidden');
+      }
+      return ok;
+    }
+
+    function validatePasswordFields(){
+      const pw = password.value || '';
+      const cpw = confirmPassword.value || '';
+
+      const okLen = pw.length >= 8;
+      const okUpper = reUpper.test(pw);
+      const okLower = reLower.test(pw);
+      const okDigit = reDigit.test(pw);
+      const okSpecial = reSpecial.test(pw);
+      const okMatch = pw.length > 0 && pw === cpw;
+
+      setState(gLen, okLen);
+      setState(gUpper, okUpper);
+      setState(gLower, okLower);
+      setState(gDigit, okDigit);
+      setState(gSpecial, okSpecial);
+      setState(gMatch, okMatch);
+
+      // Determine if guidelines should be visible:
+      const allOk = okLen && okUpper && okLower && okDigit && okSpecial && okMatch;
+      if (pw.length === 0 && cpw.length === 0) {
+        guidelines.classList.add('hidden');
+      } else if (!allOk) {
+        guidelines.classList.remove('hidden');
+      } else {
+        guidelines.classList.add('hidden');
+      }
+
+      // Inline error messages
+      passwordError.textContent = '';
+      passwordError.classList.add('hidden');
+      confirmError.textContent = '';
+      confirmError.classList.add('hidden');
+
+      const pwErrors = [];
+      if (!okLen) pwErrors.push('At least 8 characters');
+      if (!okUpper) pwErrors.push('Add an uppercase letter');
+      if (!okLower) pwErrors.push('Add a lowercase letter');
+      if (!okDigit) pwErrors.push('Add a number');
+      if (!okSpecial) pwErrors.push('Add a special character');
+
+      if (pw.length > 0 && pwErrors.length){
+        passwordError.textContent = 'Password: ' + pwErrors.join(', ') + '.';
+        passwordError.classList.remove('hidden');
+      }
+      if (cpw && !okMatch){
+        confirmError.textContent = 'Passwords do not match.';
+        confirmError.classList.remove('hidden');
+      }
+
+      return allOk;
+    }
+
+    // Live validation
+    email.addEventListener('input', validateGmail);
+    password.addEventListener('input', validatePasswordFields);
+    confirmPassword.addEventListener('input', validatePasswordFields);
+
+    // Optional: on blur, remote existence check for nicer UX
+    email.addEventListener('blur', async () => {
+      const val = (email.value || '').trim();
+      if (!reGmail.test(val)) return;
+
+      try {
+        const res = await fetch('/api/check-email?email=' + encodeURIComponent(val), {
+          headers: { 'X-Requested-With': 'XMLHttpRequest' }
+        });
+        if (!res.ok) return;
+        const data = await res.json(); // { exists: boolean }
+        if (data && data.exists) {
+          emailError.textContent = 'User already exists with this email.';
+          emailError.classList.remove('hidden');
+        }
+      } catch(e) { /* silently ignore */ }
+    });
+
+    // Final submit via fetch to capture server-side "email exists"
+    form.addEventListener('submit', async function(e){
+      const eOk = validateGmail();
+      const pOk = validatePasswordFields();
+      if (!eOk || !pOk){
+        e.preventDefault();
+        return;
+      }
+
+      // AJAX submit
+      e.preventDefault();
+      emailError.textContent = '';
+      emailError.classList.add('hidden');
+
+      // Disable submit during request
+      submitBtn.disabled = true;
+      submitBtn.value = 'Registering...';
+
+      try {
+        const formData = new FormData(form);
+        const res = await fetch(form.action || window.location.pathname, {
+          method: 'POST',
+          body: formData,
+          headers: { 'X-Requested-With': 'XMLHttpRequest' }
+        });
+
+        // Expect JSON: { ok: boolean, error?: string, errorCode?: string, redirect?: string }
+        const data = await res.json();
+
+        if (data.ok) {
+          // redirect or show success
+          window.location.href = data.redirect || '/verify-email?email=' + encodeURIComponent(email.value);
+          return;
+        }
+
+        // Handle specific server error codes
+        if (data.errorCode === 'EMAIL_EXISTS') {
+          emailError.textContent = 'User already exists with this email.';
+          emailError.classList.remove('hidden');
+        } else if (data.error) {
+          // generic error surfaced under the email for visibility
+          emailError.textContent = data.error;
+          emailError.classList.remove('hidden');
+        } else {
+          emailError.textContent = 'Registration failed. Please try again.';
+          emailError.classList.remove('hidden');
+        }
+      } catch (err) {
+        emailError.textContent = 'Something went wrong. Please try again.';
+        emailError.classList.remove('hidden');
+      } finally {
+        submitBtn.disabled = false;
+        submitBtn.value = 'Register';
+      }
+    });
+  })();
+</script>
+{% endblock %}

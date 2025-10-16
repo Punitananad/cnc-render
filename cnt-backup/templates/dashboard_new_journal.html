@@ -1,0 +1,62 @@
+{% extends "base_new_journal.html" %}
+
+{% block title %}Dashboard | Calculate N Trade{% endblock %}
+
+{% block content %}
+<div class="container mx-auto px-4 py-6">
+    <h1 class="text-3xl font-bold mb-6">Trading Dashboard</h1>
+    
+    <!-- Basic Stats -->
+    <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+        <div class="bg-white p-4 rounded-lg shadow">
+            <h3 class="text-sm text-gray-600">Total P&L</h3>
+            <p class="text-2xl font-bold">₹{{ "{:,.2f}".format(total_pnl) }}</p>
+        </div>
+        <div class="bg-white p-4 rounded-lg shadow">
+            <h3 class="text-sm text-gray-600">Win Rate</h3>
+            <p class="text-2xl font-bold">{{ win_rate }}%</p>
+        </div>
+        <div class="bg-white p-4 rounded-lg shadow">
+            <h3 class="text-sm text-gray-600">Total Trades</h3>
+            <p class="text-2xl font-bold">{{ total_trades }}</p>
+        </div>
+        <div class="bg-white p-4 rounded-lg shadow">
+            <h3 class="text-sm text-gray-600">This Month</h3>
+            <p class="text-2xl font-bold">₹{{ "{:,.2f}".format(monthly_pnl) }}</p>
+        </div>
+    </div>
+
+    <!-- Recent Trades -->
+    <div class="bg-white rounded-lg shadow p-6">
+        <h2 class="text-xl font-bold mb-4">Recent Trades</h2>
+        <div class="overflow-x-auto">
+            <table class="min-w-full">
+                <thead>
+                    <tr class="border-b">
+                        <th class="text-left py-2">Symbol</th>
+                        <th class="text-left py-2">Date</th>
+                        <th class="text-left py-2">P&L</th>
+                        <th class="text-left py-2">Result</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for trade in recent_trades[:10] %}
+                    <tr class="border-b">
+                        <td class="py-2">{{ trade.symbol }}</td>
+                        <td class="py-2">{{ trade.date.strftime('%Y-%m-%d') }}</td>
+                        <td class="py-2 {{ 'text-green-600' if trade.pnl > 0 else 'text-red-600' }}">
+                            ₹{{ "{:,.2f}".format(trade.pnl) }}
+                        </td>
+                        <td class="py-2">
+                            <span class="px-2 py-1 text-xs rounded {{ 'bg-green-100 text-green-800' if trade.result == 'win' else 'bg-red-100 text-red-800' }}">
+                                {{ trade.result.title() }}
+                            </span>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}

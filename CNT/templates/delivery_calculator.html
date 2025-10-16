@@ -1,0 +1,800 @@
+{% extends "base.html" %}
+
+{% block title %}Delivery Trade Calculator{% endblock %}
+
+{% block content %}
+<div class="right_col" role="main">
+  <div class="">
+    <div class="page-title">
+      <div class="title_left">
+        <h3>Delivery Trade Calculator</h3>
+      </div>
+    </div>
+    <div class="clearfix"></div>
+
+    <div class="row">
+      <div class="col-md-12 col-sm-12">
+        <div class="x_panel">
+          <div class="x_title">
+            <h2>Stock Search & Trade Parameters</h2>
+            <div class="clearfix"></div>
+          </div>
+          <div class="x_content">
+            <p class="text-muted font-13 m-b-30">Calculate precise entry, exit, and risk parameters for your delivery trades with no leverage</p>
+            
+            <form id="tradeForm" class="form-horizontal form-label-left" autocomplete="off">
+              <!-- Advanced Stock Search Input -->
+              <div class="form-group row">
+                <label class="control-label col-md-3 col-sm-3">Search for Stock</label>
+                <div class="col-md-9 col-sm-9">
+                  <div class="search-container">
+                    <input type="text" id="stockSearch" class="form-control search-input" placeholder="Type stock symbol or company name (e.g., RELIANCE, TCS, HDFC)" />
+                    <div class="search-icon"><i class="fa fa-search"></i></div>
+                    <button type="button" id="clearSearch" class="clear-search" style="display: none;"><i class="fa fa-times"></i></button>
+                    <div id="searchResults" class="search-results" style="display: none;"></div>
+                  </div>
+                  <div class="search-help">
+                    <small class="text-muted">💡 Try: Company names, symbols, or partial matches</small>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Stock Price Display Section -->
+              <div class="form-group row" id="stockPriceDisplay" style="display: none;">
+                <label class="control-label col-md-3 col-sm-3">Stock Info</label>
+                <div class="col-md-9 col-sm-9">
+                  <div class="well profile_view">
+                    <div class="col-sm-12">
+                      <div class="left col-sm-7">
+                        <h2 id="stockName">Stock Name</h2>
+                        <p><strong>Symbol: </strong> <span id="stockSymbol" class="badge badge-primary">SYMBOL</span></p>
+                        <p><strong>Price: </strong> <span id="stockPrice" class="badge badge-success">₹0.00</span></p>
+                        <p><strong>Change: </strong> <span id="stockChange">+0.00 (+0.00%)</span></p>
+                        <p><strong>Updated: </strong> <span id="stockUpdateTime">--:--:--</span></p>
+                      </div>
+                      <div class="right col-sm-5 text-center">
+                        <button type="button" class="btn btn-info btn-sm" onclick="autoFillPrice()">
+                          <i class="fa fa-check"></i> Use this price
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Trade Type Selection -->
+              <div class="form-group row">
+                <label class="control-label col-md-3 col-sm-3">Trade Type</label>
+                <div class="col-md-9 col-sm-9">
+                  <div class="trade-type-selector">
+                    <button type="button" class="trade-type-btn buy-btn active" data-type="buy">
+                      <i class="fa fa-arrow-up"></i> BUY
+                    </button>
+                    <button type="button" class="trade-type-btn sell-btn" data-type="sell">
+                      <i class="fa fa-arrow-down"></i> SELL
+                    </button>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Trade Parameters Section -->
+              <div class="form-group row">
+                <label class="control-label col-md-3 col-sm-3">Average Price</label>
+                <div class="col-md-9 col-sm-9">
+                  <input type="number" step="0.01" class="form-control" id="avgPrice" required placeholder="Enter average price per share" />
+                </div>
+              </div>
+
+              <div class="form-group row">
+                <label class="control-label col-md-3 col-sm-3">Quantity</label>
+                <div class="col-md-9 col-sm-9">
+                  <input type="number" class="form-control" id="quantity" required placeholder="Number of shares" />
+                </div>
+              </div>
+
+              <div class="form-group row">
+                <label class="control-label col-md-3 col-sm-3">Expected Return (%)</label>
+                <div class="col-md-9 col-sm-9">
+                  <input type="number" step="0.1" class="form-control" id="expectedReturn" value="2.5" />
+                </div>
+              </div>
+
+              <div class="form-group row">
+                <label class="control-label col-md-3 col-sm-3">Risk (%)</label>
+                <div class="col-md-9 col-sm-9">
+                  <input type="number" step="0.1" class="form-control" id="riskPercent" value="2.5" />
+                </div>
+              </div>
+
+              <div class="form-group row">
+                <label class="control-label col-md-3 col-sm-3">Trade Notes</label>
+                <div class="col-md-9 col-sm-9">
+                  <input type="text" class="form-control" id="comment" placeholder="Stock name, strategy, or comments..." />
+                </div>
+              </div>
+
+              <!-- Action Buttons -->
+              <div class="ln_solid"></div>
+              <div class="form-group row">
+                <div class="col-md-9 col-sm-9 offset-md-3">
+                  <button type="button" class="btn btn-success" onclick="calculate()"><i class="fa fa-calculator"></i> Calculate Trade</button>
+                  <button type="button" class="btn btn-warning" onclick="resetForm()"><i class="fa fa-refresh"></i> Reset</button>
+                  <button type="button" class="btn btn-primary" onclick="window.location.href='/saved_delivery'"><i class="fa fa-list"></i> View Saved Trades</button>
+                </div>
+              </div>
+            </form>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Results Output Section -->
+    <div class="row" id="output" style="display: none;">
+      <div class="col-md-12 col-sm-12">
+        <div class="x_panel">
+          <div class="x_title">
+            <h2>Trade Results</h2>
+            <ul class="nav navbar-right panel_toolbox">
+              <li>
+                <div class="trade-type-badge" id="resultTradeType">
+                  <span class="label label-success">BUY</span>
+                </div>
+              </li>
+            </ul>
+            <div class="clearfix"></div>
+          </div>
+          <div class="x_content">
+            <div class="row">
+              <div class="col-md-12">
+                <!-- No Leverage Badge -->
+                <div class="tile_count">
+                  <div class="col-md-12 col-sm-12 tile_stats_count">
+                    <span class="count_top"><i class="fa fa-shield"></i> Delivery Trading</span>
+                    <div class="count" id="leverageBadge">No Leverage</div>
+                    <span class="count_bottom">Long Term Investment</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+            
+            <div class="row">
+              <div class="col-md-12">
+                <div class="pricing">
+                  <div class="title">
+                    <h2>Trade Parameters</h2>
+                  </div>
+                  <div class="x_content">
+                    <div class="row">
+                      <div class="col-md-4 col-sm-6">
+                        <div class="pricing_features">
+                          <div class="item">
+                            <span class="pricing_feature">Target Price</span>
+                            <span class="pricing_value green" id="targetPrice">₹0.00</span>
+                          </div>
+                          <div class="item">
+                            <span class="pricing_feature">Stop-Loss Price</span>
+                            <span class="pricing_value red" id="stopLossPrice">₹0.00</span>
+                          </div>
+                        </div>
+                      </div>
+                      <div class="col-md-4 col-sm-6">
+                        <div class="pricing_features">
+                          <div class="item">
+                            <span class="pricing_feature">Expected Profit</span>
+                            <span class="pricing_value green" id="expectedProfit">₹0.00</span>
+                          </div>
+                          <div class="item">
+                            <span class="pricing_feature">Maximum Risk</span>
+                            <span class="pricing_value red" id="maxRisk">₹0.00</span>
+                          </div>
+                        </div>
+                      </div>
+                      <div class="col-md-4 col-sm-6">
+                        <div class="pricing_features">
+                          <div class="item">
+                            <span class="pricing_feature">Capital Used</span>
+                            <span class="pricing_value" id="capitalUsed">₹0.00</span>
+                          </div>
+                          <div class="item">
+                            <span class="pricing_feature">Risk-Reward Ratio</span>
+                            <span class="pricing_value" id="riskReward">0.00 : 1</span>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+            
+            <!-- Trade Notes -->
+            <div class="row">
+              <div class="col-md-12">
+                <div class="x_panel">
+                  <div class="x_title">
+                    <h2>Trade Notes</h2>
+                    <div class="clearfix"></div>
+                  </div>
+                  <div class="x_content">
+                    <blockquote>
+                      <p id="resultComment">No notes provided</p>
+                    </blockquote>
+                  </div>
+                </div>
+              </div>
+            </div>
+            
+            <!-- Action Buttons -->
+            <div class="row">
+              <div class="col-md-12 text-center">
+                <button type="button" class="btn btn-success" onclick="saveAndReset()"><i class="fa fa-save"></i> Save & Reset</button>
+                <button type="button" class="btn btn-info" onclick="copyResults()"><i class="fa fa-copy"></i> Copy Results</button>
+                <button type="button" class="btn btn-primary" onclick="window.location.href='/saved_delivery'"><i class="fa fa-list"></i> View Saved Trades</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+  // Copy MTF JS but with no leverage for delivery
+  const $ = id => document.getElementById(id);
+  const debounce = (func, delay = 250) => {
+    let timer;
+    return (...args) => {
+      clearTimeout(timer);
+      timer = setTimeout(() => func.apply(this, args), delay);
+    };
+  };
+
+  let selectedStock = null;
+  let resultData = null;
+  let currentTradeType = 'buy';
+
+  function highlightMatch(text, query) {
+    if (!query) return text;
+    const queryEsc = query.replace(/[.*+?^${}()|[\\]\\\\]/g, '\\\\$&');
+    const regex = new RegExp(`(${queryEsc})`, 'ig');
+    return text.replace(regex, '<mark>$1</mark>');
+  }
+
+  async function searchStock() {
+    const query = $('stockSearch').value.trim();
+    const clearBtn = $('clearSearch');
+    
+    clearBtn.style.display = query ? 'block' : 'none';
+    
+    if (!query) {
+      $('searchResults').style.display = 'none';
+      return;
+    }
+    
+    const resultsContainer = $('searchResults');
+    resultsContainer.innerHTML = '<div class="search-result-item loading"><i class="fas fa-spinner fa-spin"></i> Searching...</div>';
+    resultsContainer.style.display = 'block';
+    
+    try {
+      const response = await fetch(`/search-equity-symbols?query=${encodeURIComponent(query)}`);
+      const data = await response.json();
+
+      resultsContainer.innerHTML = '';
+      if (data.error) {
+        resultsContainer.innerHTML = `<div class="search-result-item error"><i class="fas fa-exclamation-triangle"></i> ${data.error}</div>`;
+        return;
+      }
+      if (data.length === 0) {
+        resultsContainer.innerHTML = `<div class="search-result-item no-results"><i class="fas fa-search"></i> No matches found for "${query}"</div>`;
+        return;
+      }
+
+      data.forEach((stock, index) => {
+        const item = document.createElement('div');
+        item.className = 'search-result-item';
+        item.innerHTML = `
+          <div class="stock-info">
+            <div class="stock-name">${highlightMatch(stock.name, query)}</div>
+            <div class="stock-symbol">${highlightMatch(stock.symbol, query)}</div>
+          </div>
+          <div class="stock-action">
+            <i class="fas fa-plus-circle"></i>
+          </div>
+        `;
+        item.onclick = () => selectStock(stock);
+        item.onmouseenter = () => item.classList.add('highlighted');
+        item.onmouseleave = () => item.classList.remove('highlighted');
+        resultsContainer.appendChild(item);
+      });
+
+    } catch (e) {
+      console.error('Search error:', e);
+      resultsContainer.innerHTML = '<div class="search-result-item error"><i class="fas fa-wifi"></i> Connection error. Please try again.</div>';
+    }
+  }
+
+  const debouncedSearch = debounce(searchStock, 300);
+
+  function selectStock(stock) {
+    selectedStock = stock;
+    $('stockSearch').value = `${stock.name} (${stock.symbol})`;
+    $('searchResults').style.display = 'none';
+    $('clearSearch').style.display = 'block';
+
+    $('stockName').textContent = stock.name;
+    $('stockSymbol').textContent = stock.symbol;
+    $('stockPriceDisplay').style.display = 'block';
+
+    fetchPrice(stock.symbol);
+  }
+  
+  function clearSearch() {
+    $('stockSearch').value = '';
+    $('searchResults').style.display = 'none';
+    $('clearSearch').style.display = 'none';
+    $('stockPriceDisplay').style.display = 'none';
+    selectedStock = null;
+    $('avgPrice').value = '';
+    $('comment').value = '';
+  }
+
+  async function fetchPrice(symbol) {
+    try {
+      const response = await fetch(`/get-price/${encodeURIComponent(symbol)}`);
+      const data = await response.json();
+      if (data.error) {
+        $('stockPrice').textContent = 'Error';
+        $('stockChange').textContent = data.error;
+        return;
+      }
+
+      $('stockPrice').textContent = `₹${data.price.toFixed(2)}`;
+      const sign = data.change >= 0 ? '+' : '';
+      $('stockChange').textContent = `${sign}${data.change.toFixed(2)} (${sign}${data.change_percent.toFixed(2)}%)`;
+      $('stockChange').className = data.change >= 0 ? 'price-change positive' : 'price-change negative';
+      $('stockUpdateTime').textContent = `Last updated: ${data.last_updated}`;
+
+      $('avgPrice').value = data.price.toFixed(2);
+      if (selectedStock) {
+        $('comment').value = `${selectedStock.name} (${selectedStock.symbol})`;
+      }
+    } catch (e) {
+      console.error('Price fetch failed', e);
+      $('stockPrice').textContent = 'Error';
+      $('stockChange').textContent = 'Failed to fetch price';
+    }
+  }
+
+  function autoFillPrice() {
+    if (!$('stockPrice').textContent || $('stockPrice').textContent === '₹0.00') {
+      alert('Please select a stock and fetch the price first.');
+      return;
+    }
+    const priceText = $('stockPrice').textContent.replace('₹', '');
+    $('avgPrice').value = Number(priceText).toFixed(2);
+  }
+
+  function calculate() {
+    const avgPrice = parseFloat($('avgPrice').value);
+    const quantity = parseInt($('quantity').value);
+    const expectedReturn = parseFloat($('expectedReturn').value);
+    const riskPercent = parseFloat($('riskPercent').value);
+    const comment = $('comment').value.trim();
+    const leverage = 1; // No leverage for delivery
+
+    if (isNaN(avgPrice) || isNaN(quantity) || isNaN(expectedReturn) || isNaN(riskPercent)) {
+      alert('Please enter valid numbers in all fields.');
+      return;
+    }
+
+    const capital_used = (avgPrice * quantity) / leverage;
+    const target_profit = capital_used * (expectedReturn / 100);
+    const max_risk = capital_used * (riskPercent / 100);
+    const move_per_share_up = target_profit / quantity;
+    const move_per_share_down = max_risk / quantity;
+
+    let target_price, stop_loss_price;
+
+    if (currentTradeType === 'buy') {
+      target_price = avgPrice + move_per_share_up;
+      stop_loss_price = avgPrice - move_per_share_down;
+    } else {
+      target_price = avgPrice - move_per_share_up;
+      stop_loss_price = avgPrice + move_per_share_down;
+    }
+
+    const rr_ratio = max_risk === 0 ? '∞' : (target_profit / max_risk).toFixed(2);
+
+    resultData = {
+      trade_type: currentTradeType,
+      avg_price: avgPrice,
+      quantity,
+      expected_return: expectedReturn,
+      risk_percent: riskPercent,
+      capital_used,
+      target_price,
+      stop_loss_price,
+      total_reward: target_profit,
+      total_risk: max_risk,
+      rr_ratio,
+      comment,
+      symbol: selectedStock ? selectedStock.symbol : null,
+      leverage: leverage
+    };
+
+    $('targetPrice').textContent = `₹${target_price.toFixed(2)}`;
+    $('stopLossPrice').textContent = `₹${stop_loss_price.toFixed(2)}`;
+    $('expectedProfit').textContent = `₹${target_profit.toFixed(2)}`;
+    $('maxRisk').textContent = `₹${max_risk.toFixed(2)}`;
+    $('capitalUsed').textContent = `₹${capital_used.toFixed(2)}`;
+    $('leverageBadge').textContent = `No Leverage`;
+    $('riskReward').textContent = `${rr_ratio} : 1`;
+    $('resultComment').textContent = comment || 'No notes provided';
+    
+    const tradeTypeBadge = $('resultTradeType');
+    tradeTypeBadge.innerHTML = `<span class="label ${currentTradeType === 'buy' ? 'label-success' : 'label-danger'}">${currentTradeType.toUpperCase()}</span>`;
+
+    $('output').style.display = 'block';
+    
+    // Scroll to results
+    setTimeout(() => {
+      $('output').scrollIntoView({ behavior: 'smooth' });
+    }, 100);
+  }
+
+  function resetForm() {
+    selectedStock = null;
+    resultData = null;
+    $('stockSearch').value = '';
+    $('searchResults').style.display = 'none';
+    $('stockPriceDisplay').style.display = 'none';
+
+    $('avgPrice').value = '';
+    $('quantity').value = '';
+    $('expectedReturn').value = '2.5';
+    $('riskPercent').value = '2.5';
+    $('comment').value = '';
+    $('output').style.display = 'none';
+  }
+
+  async function saveAndReset() {
+    if (!resultData) {
+      calculate();
+      if (!resultData) {
+        new PNotify({
+          title: 'Calculation Error',
+          text: 'Failed to calculate. Please check your inputs.',
+          type: 'error',
+          styling: 'bootstrap3'
+        });
+        return;
+      }
+    }
+
+    try {
+      const response = await fetch('/save_delivery_result', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify(resultData)
+      });
+      if (response.ok) {
+        new PNotify({
+          title: 'Success',
+          text: 'Trade saved successfully!',
+          type: 'success',
+          styling: 'bootstrap3'
+        });
+        resetForm();
+      } else {
+        new PNotify({
+          title: 'Error',
+          text: 'Failed to save. Please try again.',
+          type: 'error',
+          styling: 'bootstrap3'
+        });
+      }
+    } catch (error) {
+      console.error('Error saving:', error);
+      new PNotify({
+        title: 'Error',
+        text: 'Error saving trade. Check console for details.',
+        type: 'error',
+        styling: 'bootstrap3'
+      });
+    }
+  }
+
+  function copyResults() {
+    if (!resultData) {
+      new PNotify({
+        title: 'Warning',
+        text: 'Please calculate first.',
+        type: 'warning',
+        styling: 'bootstrap3'
+      });
+      return;
+    }
+    const txt = `Trade Type: ${resultData.trade_type.toUpperCase()}\nAverage Price: ₹${resultData.avg_price}\nQuantity: ${resultData.quantity}\nLeverage: ${resultData.leverage}x\nExpected Return: ${resultData.expected_return}%\nRisk Percent: ${resultData.risk_percent}%\nTarget Price: ₹${resultData.target_price.toFixed(2)}\nStop Loss Price: ₹${resultData.stop_loss_price.toFixed(2)}\nExpected Profit: ₹${resultData.total_reward.toFixed(2)}\nMax Risk: ₹${resultData.total_risk.toFixed(2)}\nCapital Used: ₹${resultData.capital_used.toFixed(2)} (No Leverage)\nRisk-Reward Ratio: ${resultData.rr_ratio} : 1\nNotes: ${resultData.comment}`;
+
+    navigator.clipboard.writeText(txt).then(() => {
+      new PNotify({
+        title: 'Success',
+        text: 'Results copied to clipboard!',
+        type: 'success',
+        styling: 'bootstrap3'
+      });
+    });
+  }
+
+  function selectTradeType(type) {
+    currentTradeType = type;
+    
+    document.querySelectorAll('.trade-type-btn').forEach(btn => {
+      btn.classList.remove('active');
+    });
+    document.querySelector(`[data-type="${type}"]`).classList.add('active');
+    
+    updateLabelsForTradeType(type);
+  }
+  
+  function updateLabelsForTradeType(type) {
+    const targetLabel = document.querySelector('label[for="expectedReturn"]');
+    const riskLabel = document.querySelector('label[for="riskPercent"]');
+    
+    if (type === 'buy') {
+      targetLabel.textContent = 'Expected Return (%)';
+      riskLabel.textContent = 'Risk (%)';
+    } else {
+      targetLabel.textContent = 'Expected Profit (%)';
+      riskLabel.textContent = 'Risk (%)';
+    }
+  }
+
+  document.addEventListener('DOMContentLoaded', () => {
+    const stockSearchInput = $('stockSearch');
+    stockSearchInput.addEventListener('input', debounce(searchStock, 300));
+
+    document.addEventListener('click', e => {
+      if (!e.target.closest('#stockSearch') && !e.target.closest('#searchResults')) {
+        $('searchResults').style.display = 'none';
+      }
+    });
+    
+    document.querySelectorAll('.trade-type-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        selectTradeType(btn.dataset.type);
+      });
+    });
+    
+    $('clearSearch').addEventListener('click', clearSearch);
+    
+    $('stockSearch').addEventListener('keydown', (e) => {
+      const results = document.querySelectorAll('.search-result-item:not(.loading):not(.error):not(.no-results)');
+      if (results.length === 0) return;
+      
+      if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
+        e.preventDefault();
+        const highlighted = document.querySelector('.search-result-item.highlighted');
+        let index = highlighted ? Array.from(results).indexOf(highlighted) : -1;
+        
+        if (highlighted) highlighted.classList.remove('highlighted');
+        
+        if (e.key === 'ArrowDown') {
+          index = (index + 1) % results.length;
+        } else {
+          index = index <= 0 ? results.length - 1 : index - 1;
+        }
+        
+        results[index].classList.add('highlighted');
+      } else if (e.key === 'Enter') {
+        const highlighted = document.querySelector('.search-result-item.highlighted');
+        if (highlighted) {
+          highlighted.click();
+        }
+      }
+    });
+  });
+</script>
+
+<style>
+  .search-container {
+    position: relative;
+    display: block;
+  }
+  
+  .search-form-group {
+    position: relative;
+  }
+  
+  .search-input {
+    width: 100%;
+    position: relative;
+  }
+  
+  .search-input {
+    padding-right: 80px !important;
+  }
+  
+  .search-icon {
+    position: absolute;
+    right: 45px;
+    top: 50%;
+    transform: translateY(-50%);
+    color: #666;
+    pointer-events: none;
+  }
+  
+  .clear-search {
+    position: absolute;
+    right: 15px;
+    top: 50%;
+    transform: translateY(-50%);
+    background: none;
+    border: none;
+    color: #999;
+    cursor: pointer;
+    padding: 5px;
+    border-radius: 50%;
+    transition: all 0.2s ease;
+  }
+  
+  .clear-search:hover {
+    background: #f0f0f0;
+    color: #333;
+  }
+  
+  .search-results {
+    position: absolute;
+    top: calc(100% + 2px);
+    left: 0;
+    right: 0;
+    background: white;
+    border: 1px solid #ddd;
+    max-height: 250px;
+    overflow-y: auto;
+    z-index: 1000;
+    border-radius: 8px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+    margin-top: 2px;
+  }
+  
+  .search-result-item {
+    padding: 12px 16px;
+    cursor: pointer;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-bottom: 1px solid #f0f0f0;
+    transition: all 0.2s ease;
+  }
+  
+  .search-result-item:last-child {
+    border-bottom: none;
+  }
+  
+  .search-result-item:hover,
+  .search-result-item.highlighted {
+    background: linear-gradient(135deg, #f8f9ff, #e8f0ff);
+    transform: translateX(2px);
+  }
+  
+  .search-result-item.loading {
+    color: #666;
+    cursor: default;
+  }
+  
+  .search-result-item.error {
+    color: #d32f2f;
+    cursor: default;
+  }
+  
+  .search-result-item.no-results {
+    color: #666;
+    cursor: default;
+    font-style: italic;
+  }
+  
+  .stock-info {
+    flex: 1;
+  }
+  
+  .stock-name {
+    font-weight: 600;
+    color: #333;
+    margin-bottom: 2px;
+  }
+  
+  .stock-symbol {
+    color: #666;
+    font-size: 12px;
+    font-weight: 500;
+  }
+  
+  .stock-action {
+    color: #4CAF50;
+    font-size: 18px;
+  }
+  
+  .search-help {
+    margin-top: 5px;
+  }
+  
+  .search-help small {
+    color: #666;
+    font-size: 11px;
+  }
+  mark {
+    background-color: #ffc107;
+    color: black;
+    font-weight: 700;
+  }
+  .price-change.positive {
+    color: green;
+  }
+  .price-change.negative {
+    color: red;
+  }
+  .leverage-badge {
+    padding: 2px 8px;
+    background: #e6f0ff;
+    color: #0050cc;
+    border-radius: 9999px;
+    font-weight: 600;
+    font-size: 12px;
+    margin-left: 8px;
+  }
+  
+  .trade-type-selector {
+    display: flex;
+    gap: 10px;
+    margin-top: 8px;
+  }
+  
+  .trade-type-btn {
+    flex: 1;
+    padding: 12px 20px;
+    border: 2px solid transparent;
+    border-radius: 8px;
+    font-weight: bold;
+    font-size: 14px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+  }
+  
+  .buy-btn {
+    background: rgba(0, 255, 136, 0.1);
+    color: #00ff88;
+    border-color: rgba(0, 255, 136, 0.3);
+  }
+  
+  .buy-btn.active {
+    background: #00ff88;
+    color: #000;
+    border-color: #00ff88;
+  }
+  
+  .sell-btn {
+    background: rgba(255, 79, 79, 0.1);
+    color: #ff4f4f;
+    border-color: rgba(255, 79, 79, 0.3);
+  }
+  
+  .sell-btn.active {
+    background: #ff4f4f;
+    color: #fff;
+    border-color: #ff4f4f;
+  }
+  
+  .trade-type-btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+  }
+</style>
+{% endblock %}

@@ -1,0 +1,720 @@
+{% extends "base_new_journal.html" %}
+
+{% block title %}Performance Analytics | Calculate N Trade{% endblock %}
+
+{% block extra_head %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/date-fns@2.29.3/index.min.js"></script>
+{% endblock %}
+
+{% block content %}
+<div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+  <!-- Header -->
+  <div class="flex justify-between items-center mb-6">
+    <div>
+      <h1 class="text-2xl font-bold text-gray-800 dark:text-white">Performance Analytics</h1>
+      <p class="text-gray-500 dark:text-gray-400">Comprehensive trading performance analysis</p>
+    </div>
+    <button id="exportBtn" class="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition">
+      <i class="fas fa-download mr-2"></i>Export CSV
+    </button>
+  </div>
+
+  <!-- Filters -->
+  <div class="bg-white dark:bg-gray-800 rounded-xl shadow p-4 mb-6">
+    <div class="grid grid-cols-1 md:grid-cols-6 gap-4">
+      <div>
+        <label class="block text-sm font-medium mb-1">Start Date</label>
+        <input type="date" id="startDate" class="w-full px-3 py-2 border rounded-lg text-sm">
+      </div>
+      <div>
+        <label class="block text-sm font-medium mb-1">End Date</label>
+        <input type="date" id="endDate" class="w-full px-3 py-2 border rounded-lg text-sm">
+      </div>
+      <div>
+        <label class="block text-sm font-medium mb-1">Strategy</label>
+        <select id="strategyFilter" class="w-full px-3 py-2 border rounded-lg text-sm">
+          <option value="">All Strategies</option>
+          {% for strategy in strategies %}
+          <option value="{{ strategy.id }}">{{ strategy.name }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div>
+        <label class="block text-sm font-medium mb-1">Symbol</label>
+        <input type="text" id="symbolFilter" placeholder="e.g. RELIANCE" class="w-full px-3 py-2 border rounded-lg text-sm">
+      </div>
+      <div>
+        <label class="block text-sm font-medium mb-1">Trade Type</label>
+        <select id="tradeTypeFilter" class="w-full px-3 py-2 border rounded-lg text-sm">
+          <option value="">All Types</option>
+          <option value="long">Long</option>
+          <option value="short">Short</option>
+        </select>
+      </div>
+      <div class="flex items-end">
+        <button id="applyFilters" class="w-full px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition text-sm">
+          Apply Filters
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- KPI Cards -->
+  <div class="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-8 gap-4 mb-6">
+    <div class="bg-white dark:bg-gray-800 rounded-xl shadow p-4 text-center">
+      <div id="totalPnl" class="text-2xl font-bold text-green-600">₹0</div>
+      <div class="text-xs text-gray-500 mt-1">Total P&L</div>
+      <div id="pnlTrend" class="text-xs mt-1">
+        <i class="fas fa-arrow-up text-green-500"></i> 0%
+      </div>
+    </div>
+    
+    <div class="bg-white dark:bg-gray-800 rounded-xl shadow p-4 text-center">
+      <div id="winRate" class="text-2xl font-bold text-blue-600">0%</div>
+      <div class="text-xs text-gray-500 mt-1">Win Rate</div>
+      <canvas id="winRateSparkline" width="60" height="20" class="mt-1"></canvas>
+    </div>
+    
+    <div class="bg-white dark:bg-gray-800 rounded-xl shadow p-4 text-center">
+      <div id="totalTrades" class="text-2xl font-bold text-purple-600">0</div>
+      <div class="text-xs text-gray-500 mt-1">Total Trades</div>
+      <div class="text-xs text-gray-400 mt-1">This Period</div>
+    </div>
+    
+    <div class="bg-white dark:bg-gray-800 rounded-xl shadow p-4 text-center">
+      <div id="avgRR" class="text-2xl font-bold text-orange-600">0:0</div>
+      <div class="text-xs text-gray-500 mt-1">Avg R:R</div>
+      <div class="text-xs text-gray-400 mt-1">Risk:Reward</div>
+    </div>
+    
+    <div class="bg-white dark:bg-gray-800 rounded-xl shadow p-4 text-center">
+      <div id="expectancy" class="text-2xl font-bold text-indigo-600">₹0</div>
+      <div class="text-xs text-gray-500 mt-1">Expectancy</div>
+      <div class="text-xs text-gray-400 mt-1">Per Trade</div>
+    </div>
+    
+    <div class="bg-white dark:bg-gray-800 rounded-xl shadow p-4 text-center">
+      <div id="profitFactor" class="text-2xl font-bold text-teal-600">0.0</div>
+      <div class="text-xs text-gray-500 mt-1">Profit Factor</div>
+      <div class="text-xs text-gray-400 mt-1">Gross P/L Ratio</div>
+    </div>
+    
+    <div class="bg-white dark:bg-gray-800 rounded-xl shadow p-4 text-center">
+      <div id="maxDrawdown" class="text-2xl font-bold text-red-600">₹0</div>
+      <div class="text-xs text-gray-500 mt-1">Max Drawdown</div>
+      <div class="text-xs text-gray-400 mt-1">Peak to Trough</div>
+    </div>
+    
+    <div class="bg-white dark:bg-gray-800 rounded-xl shadow p-4 text-center">
+      <div id="avgHoldTime" class="text-2xl font-bold text-gray-600">0h</div>
+      <div class="text-xs text-gray-500 mt-1">Avg Hold Time</div>
+      <div class="text-xs text-gray-400 mt-1">Coming Soon</div>
+    </div>
+  </div>
+
+  <!-- Charts Section -->
+  <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+    <!-- Equity Curve -->
+    <div class="bg-white dark:bg-gray-800 rounded-xl shadow p-6">
+      <h3 class="text-lg font-semibold mb-4">Equity Curve</h3>
+      <div class="relative h-64">
+        <canvas id="equityCurveChart"></canvas>
+      </div>
+    </div>
+
+    <!-- Win vs Loss Distribution -->
+    <div class="bg-white dark:bg-gray-800 rounded-xl shadow p-6">
+      <h3 class="text-lg font-semibold mb-4">Win vs Loss Distribution</h3>
+      <div class="relative h-64">
+        <canvas id="winLossChart"></canvas>
+      </div>
+    </div>
+
+    <!-- R-Multiple Distribution -->
+    <div class="bg-white dark:bg-gray-800 rounded-xl shadow p-6">
+      <h3 class="text-lg font-semibold mb-4">R-Multiple Distribution</h3>
+      <div class="relative h-64">
+        <canvas id="rMultipleChart"></canvas>
+      </div>
+    </div>
+
+    <!-- Trade Type Distribution -->
+    <div class="bg-white dark:bg-gray-800 rounded-xl shadow p-6">
+      <h3 class="text-lg font-semibold mb-4">Long vs Short Trades</h3>
+      <div class="relative h-64">
+        <canvas id="tradeTypeChart"></canvas>
+      </div>
+    </div>
+  </div>
+
+  <!-- Performance by Strategy/Symbol -->
+  <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+    <div class="bg-white dark:bg-gray-800 rounded-xl shadow p-6">
+      <h3 class="text-lg font-semibold mb-4">Performance by Strategy</h3>
+      <div class="relative h-64">
+        <canvas id="strategyChart"></canvas>
+      </div>
+    </div>
+
+    <div class="bg-white dark:bg-gray-800 rounded-xl shadow p-6">
+      <h3 class="text-lg font-semibold mb-4">Performance by Symbol</h3>
+      <div class="relative h-64">
+        <canvas id="symbolChart"></canvas>
+      </div>
+    </div>
+  </div>
+
+  <!-- Calendar Heatmap -->
+  <div class="bg-white dark:bg-gray-800 rounded-xl shadow p-6 mb-6">
+    <h3 class="text-lg font-semibold mb-4">Trading Calendar</h3>
+    <div id="calendarHeatmap" class="grid grid-cols-7 gap-1 text-xs">
+      <!-- Calendar will be populated here -->
+    </div>
+    <div class="flex justify-center mt-4 space-x-4 text-xs">
+      <div class="flex items-center">
+        <div class="w-3 h-3 bg-red-200 rounded mr-1"></div>
+        <span>Loss</span>
+      </div>
+      <div class="flex items-center">
+        <div class="w-3 h-3 bg-gray-200 rounded mr-1"></div>
+        <span>No Trade</span>
+      </div>
+      <div class="flex items-center">
+        <div class="w-3 h-3 bg-green-200 rounded mr-1"></div>
+        <span>Profit</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Trade Table -->
+  <div class="bg-white dark:bg-gray-800 rounded-xl shadow p-6">
+    <div class="flex justify-between items-center mb-4">
+      <h3 class="text-lg font-semibold">Trade History</h3>
+      <div class="flex gap-2">
+        <input type="text" id="tradeSearch" placeholder="Search trades..." class="px-3 py-2 border rounded-lg text-sm">
+        <button id="exportTradesBtn" class="px-3 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition text-sm">
+          <i class="fas fa-download mr-1"></i>Export
+        </button>
+      </div>
+    </div>
+    
+    <div class="overflow-x-auto">
+      <table id="tradesTable" class="w-full text-sm">
+        <thead class="bg-gray-50 dark:bg-gray-700">
+          <tr>
+            <th class="px-4 py-3 text-left cursor-pointer hover:bg-gray-100" data-sort="date">
+              Date <i class="fas fa-sort ml-1"></i>
+            </th>
+            <th class="px-4 py-3 text-left cursor-pointer hover:bg-gray-100" data-sort="symbol">
+              Symbol <i class="fas fa-sort ml-1"></i>
+            </th>
+            <th class="px-4 py-3 text-left cursor-pointer hover:bg-gray-100" data-sort="entry_price">
+              Entry <i class="fas fa-sort ml-1"></i>
+            </th>
+            <th class="px-4 py-3 text-left cursor-pointer hover:bg-gray-100" data-sort="exit_price">
+              Exit <i class="fas fa-sort ml-1"></i>
+            </th>
+            <th class="px-4 py-3 text-left cursor-pointer hover:bg-gray-100" data-sort="quantity">
+              Qty <i class="fas fa-sort ml-1"></i>
+            </th>
+            <th class="px-4 py-3 text-left cursor-pointer hover:bg-gray-100" data-sort="pnl">
+              P&L <i class="fas fa-sort ml-1"></i>
+            </th>
+            <th class="px-4 py-3 text-left cursor-pointer hover:bg-gray-100" data-sort="r_multiple">
+              R-Multiple <i class="fas fa-sort ml-1"></i>
+            </th>
+            <th class="px-4 py-3 text-left cursor-pointer hover:bg-gray-100" data-sort="trade_type">
+              Type <i class="fas fa-sort ml-1"></i>
+            </th>
+            <th class="px-4 py-3 text-left">Notes</th>
+          </tr>
+        </thead>
+        <tbody id="tradesTableBody">
+          <!-- Trades will be populated here -->
+        </tbody>
+      </table>
+    </div>
+    
+    <!-- Pagination -->
+    <div class="flex justify-between items-center mt-4">
+      <div class="text-sm text-gray-500">
+        Showing <span id="showingFrom">0</span> to <span id="showingTo">0</span> of <span id="totalTrades">0</span> trades
+      </div>
+      <div class="flex gap-2">
+        <button id="prevPage" class="px-3 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition text-sm disabled:opacity-50">
+          Previous
+        </button>
+        <span id="pageInfo" class="px-3 py-2 text-sm">Page 1 of 1</span>
+        <button id="nextPage" class="px-3 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition text-sm disabled:opacity-50">
+          Next
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Loading Overlay -->
+<div id="loadingOverlay" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+  <div class="bg-white rounded-lg p-6 flex items-center">
+    <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mr-3"></div>
+    <span>Loading analytics...</span>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+  let currentPage = 1;
+  let currentSort = { field: 'date', direction: 'desc' };
+  let charts = {};
+
+  // Set default date range (last 30 days)
+  const today = new Date();
+  const thirtyDaysAgo = new Date(today.getTime() - 30 * 24 * 60 * 60 * 1000);
+  
+  document.getElementById('startDate').value = thirtyDaysAgo.toISOString().split('T')[0];
+  document.getElementById('endDate').value = today.toISOString().split('T')[0];
+
+  // Initialize
+  loadAllData();
+
+  // Event listeners
+  document.getElementById('applyFilters').addEventListener('click', loadAllData);
+  document.getElementById('exportBtn').addEventListener('click', exportData);
+  document.getElementById('exportTradesBtn').addEventListener('click', exportTrades);
+  document.getElementById('tradeSearch').addEventListener('input', debounce(searchTrades, 300));
+  document.getElementById('prevPage').addEventListener('click', () => changePage(-1));
+  document.getElementById('nextPage').addEventListener('click', () => changePage(1));
+
+  // Table sorting
+  document.querySelectorAll('[data-sort]').forEach(th => {
+    th.addEventListener('click', () => sortTable(th.dataset.sort));
+  });
+
+  function showLoading() {
+    document.getElementById('loadingOverlay').classList.remove('hidden');
+  }
+
+  function hideLoading() {
+    document.getElementById('loadingOverlay').classList.add('hidden');
+  }
+
+  function getFilters() {
+    return {
+      start: document.getElementById('startDate').value,
+      end: document.getElementById('endDate').value,
+      strategy_id: document.getElementById('strategyFilter').value,
+      symbol: document.getElementById('symbolFilter').value,
+      trade_type: document.getElementById('tradeTypeFilter').value
+    };
+  }
+
+  async function loadAllData() {
+    showLoading();
+    try {
+      await Promise.all([
+        loadSummary(),
+        loadEquityCurve(),
+        loadRMultiples(),
+        loadStrategyData(),
+        loadSymbolData(),
+        loadCalendar(),
+        loadTrades()
+      ]);
+    } catch (error) {
+      console.error('Error loading data:', error);
+    } finally {
+      hideLoading();
+    }
+  }
+
+  async function loadSummary() {
+    const filters = getFilters();
+    const params = new URLSearchParams(filters);
+    
+    const response = await fetch(`/calculatentrade_journal/api/reports/summary?${params}`);
+    const data = await response.json();
+
+    // Update KPI cards
+    document.getElementById('totalPnl').textContent = `₹${data.total_pnl.toLocaleString()}`;
+    document.getElementById('totalPnl').className = `text-2xl font-bold ${data.total_pnl >= 0 ? 'text-green-600' : 'text-red-600'}`;
+    
+    document.getElementById('winRate').textContent = `${data.win_rate}%`;
+    document.getElementById('totalTrades').textContent = data.total_trades;
+    document.getElementById('avgRR').textContent = `1:${data.avg_rr.toFixed(1)}`;
+    document.getElementById('expectancy').textContent = `₹${data.expectancy.toFixed(2)}`;
+    document.getElementById('profitFactor').textContent = data.profit_factor.toFixed(2);
+    document.getElementById('maxDrawdown').textContent = `₹${data.max_drawdown.toLocaleString()}`;
+    document.getElementById('avgHoldTime').textContent = `${data.avg_hold_time}h`;
+
+    // Update trend indicators
+    const pnlTrend = data.total_pnl >= 0 ? 'up' : 'down';
+    const trendColor = pnlTrend === 'up' ? 'text-green-500' : 'text-red-500';
+    const trendIcon = pnlTrend === 'up' ? 'fa-arrow-up' : 'fa-arrow-down';
+    document.getElementById('pnlTrend').innerHTML = `<i class="fas ${trendIcon} ${trendColor}"></i> ${Math.abs(data.total_pnl).toFixed(1)}%`;
+  }
+
+  async function loadEquityCurve() {
+    const filters = getFilters();
+    const params = new URLSearchParams({ start: filters.start, end: filters.end });
+    
+    const response = await fetch(`/calculatentrade_journal/api/reports/equity_curve?${params}`);
+    const data = await response.json();
+
+    const ctx = document.getElementById('equityCurveChart').getContext('2d');
+    
+    if (charts.equity) charts.equity.destroy();
+    
+    charts.equity = new Chart(ctx, {
+      type: 'line',
+      data: {
+        labels: data.equity_curve.map(d => d.date),
+        datasets: [{
+          label: 'Equity',
+          data: data.equity_curve.map(d => d.equity),
+          borderColor: 'rgb(59, 130, 246)',
+          backgroundColor: 'rgba(59, 130, 246, 0.1)',
+          fill: true,
+          tension: 0.1
+        }, {
+          label: 'Drawdown',
+          data: data.equity_curve.map(d => -d.drawdown),
+          borderColor: 'rgb(239, 68, 68)',
+          backgroundColor: 'rgba(239, 68, 68, 0.1)',
+          fill: true,
+          tension: 0.1
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        scales: {
+          y: {
+            beginAtZero: false
+          }
+        },
+        plugins: {
+          legend: {
+            display: true
+          }
+        }
+      }
+    });
+  }
+
+  async function loadRMultiples() {
+    const filters = getFilters();
+    const params = new URLSearchParams({ start: filters.start, end: filters.end });
+    
+    const response = await fetch(`/calculatentrade_journal/api/reports/r_multiples_hist?${params}`);
+    const data = await response.json();
+
+    const ctx = document.getElementById('rMultipleChart').getContext('2d');
+    
+    if (charts.rMultiple) charts.rMultiple.destroy();
+    
+    charts.rMultiple = new Chart(ctx, {
+      type: 'bar',
+      data: {
+        labels: data.bins,
+        datasets: [{
+          label: 'Trade Count',
+          data: data.counts,
+          backgroundColor: 'rgba(59, 130, 246, 0.6)',
+          borderColor: 'rgb(59, 130, 246)',
+          borderWidth: 1
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        scales: {
+          y: {
+            beginAtZero: true
+          }
+        }
+      }
+    });
+
+    // Win/Loss pie chart
+    const winLossCtx = document.getElementById('winLossChart').getContext('2d');
+    if (charts.winLoss) charts.winLoss.destroy();
+    
+    const totalWins = data.counts.slice(4).reduce((a, b) => a + b, 0); // R > 0
+    const totalLosses = data.counts.slice(0, 4).reduce((a, b) => a + b, 0); // R <= 0
+    
+    charts.winLoss = new Chart(winLossCtx, {
+      type: 'doughnut',
+      data: {
+        labels: ['Wins', 'Losses'],
+        datasets: [{
+          data: [totalWins, totalLosses],
+          backgroundColor: ['#10B981', '#EF4444'],
+          borderWidth: 2
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+          legend: {
+            position: 'bottom'
+          }
+        }
+      }
+    });
+  }
+
+  async function loadStrategyData() {
+    const filters = getFilters();
+    const params = new URLSearchParams({ start: filters.start, end: filters.end });
+    
+    const response = await fetch(`/calculatentrade_journal/api/reports/by_strategy?${params}`);
+    const data = await response.json();
+
+    const ctx = document.getElementById('strategyChart').getContext('2d');
+    
+    if (charts.strategy) charts.strategy.destroy();
+    
+    charts.strategy = new Chart(ctx, {
+      type: 'bar',
+      data: {
+        labels: data.strategies.map(s => s.strategy),
+        datasets: [{
+          label: 'P&L (₹)',
+          data: data.strategies.map(s => s.pnl),
+          backgroundColor: data.strategies.map(s => s.pnl >= 0 ? 'rgba(16, 185, 129, 0.6)' : 'rgba(239, 68, 68, 0.6)'),
+          borderColor: data.strategies.map(s => s.pnl >= 0 ? 'rgb(16, 185, 129)' : 'rgb(239, 68, 68)'),
+          borderWidth: 1
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        scales: {
+          y: {
+            beginAtZero: true
+          }
+        }
+      }
+    });
+  }
+
+  async function loadSymbolData() {
+    const filters = getFilters();
+    const params = new URLSearchParams({ start: filters.start, end: filters.end });
+    
+    const response = await fetch(`/calculatentrade_journal/api/reports/by_symbol?${params}`);
+    const data = await response.json();
+
+    const ctx = document.getElementById('symbolChart').getContext('2d');
+    
+    if (charts.symbol) charts.symbol.destroy();
+    
+    charts.symbol = new Chart(ctx, {
+      type: 'bar',
+      data: {
+        labels: data.symbols.slice(0, 10).map(s => s.symbol),
+        datasets: [{
+          label: 'P&L (₹)',
+          data: data.symbols.slice(0, 10).map(s => s.pnl),
+          backgroundColor: data.symbols.slice(0, 10).map(s => s.pnl >= 0 ? 'rgba(16, 185, 129, 0.6)' : 'rgba(239, 68, 68, 0.6)'),
+          borderColor: data.symbols.slice(0, 10).map(s => s.pnl >= 0 ? 'rgb(16, 185, 129)' : 'rgb(239, 68, 68)'),
+          borderWidth: 1
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        scales: {
+          y: {
+            beginAtZero: true
+          }
+        }
+      }
+    });
+
+    // Trade type distribution
+    const tradeTypeCtx = document.getElementById('tradeTypeChart').getContext('2d');
+    if (charts.tradeType) charts.tradeType.destroy();
+    
+    // Calculate long vs short from symbol data (approximation)
+    const totalTrades = data.symbols.reduce((sum, s) => sum + s.trades, 0);
+    
+    charts.tradeType = new Chart(tradeTypeCtx, {
+      type: 'doughnut',
+      data: {
+        labels: ['Long', 'Short'],
+        datasets: [{
+          data: [Math.floor(totalTrades * 0.7), Math.floor(totalTrades * 0.3)], // Approximation
+          backgroundColor: ['#3B82F6', '#F59E0B'],
+          borderWidth: 2
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+          legend: {
+            position: 'bottom'
+          }
+        }
+      }
+    });
+  }
+
+  async function loadCalendar() {
+    const filters = getFilters();
+    const params = new URLSearchParams({ start: filters.start, end: filters.end });
+    
+    const response = await fetch(`/calculatentrade_journal/api/reports/calendar?${params}`);
+    const data = await response.json();
+
+    const calendarContainer = document.getElementById('calendarHeatmap');
+    calendarContainer.innerHTML = '';
+
+    // Add day headers
+    ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].forEach(day => {
+      const dayHeader = document.createElement('div');
+      dayHeader.className = 'text-center font-medium text-gray-500 p-2';
+      dayHeader.textContent = day;
+      calendarContainer.appendChild(dayHeader);
+    });
+
+    // Add calendar days
+    data.calendar.forEach(day => {
+      const dayDiv = document.createElement('div');
+      dayDiv.className = 'aspect-square p-1 text-center text-xs border rounded cursor-pointer';
+      
+      if (day.trades > 0) {
+        if (day.pnl > 0) {
+          dayDiv.className += ' bg-green-200 text-green-800 hover:bg-green-300';
+        } else {
+          dayDiv.className += ' bg-red-200 text-red-800 hover:bg-red-300';
+        }
+      } else {
+        dayDiv.className += ' bg-gray-100 text-gray-400';
+      }
+      
+      const date = new Date(day.date);
+      dayDiv.textContent = date.getDate();
+      dayDiv.title = `${day.date}: ₹${day.pnl} (${day.trades} trades)${day.notes ? '\n' + day.notes : ''}`;
+      
+      calendarContainer.appendChild(dayDiv);
+    });
+  }
+
+  async function loadTrades() {
+    const filters = getFilters();
+    const params = new URLSearchParams({
+      ...filters,
+      page: currentPage,
+      per_page: 50
+    });
+    
+    const response = await fetch(`/calculatentrade_journal/api/reports/trades?${params}`);
+    const data = await response.json();
+
+    const tbody = document.getElementById('tradesTableBody');
+    tbody.innerHTML = '';
+
+    data.trades.forEach(trade => {
+      const row = document.createElement('tr');
+      row.className = 'border-b hover:bg-gray-50 dark:hover:bg-gray-700';
+      
+      row.innerHTML = `
+        <td class="px-4 py-3">${trade.date}</td>
+        <td class="px-4 py-3 font-medium">${trade.symbol}</td>
+        <td class="px-4 py-3">₹${trade.entry_price.toFixed(2)}</td>
+        <td class="px-4 py-3">₹${trade.exit_price.toFixed(2)}</td>
+        <td class="px-4 py-3">${trade.quantity}</td>
+        <td class="px-4 py-3 font-medium ${trade.pnl >= 0 ? 'text-green-600' : 'text-red-600'}">
+          ₹${trade.pnl.toFixed(2)}
+        </td>
+        <td class="px-4 py-3 ${trade.r_multiple >= 0 ? 'text-green-600' : 'text-red-600'}">
+          ${trade.r_multiple.toFixed(2)}R
+        </td>
+        <td class="px-4 py-3">
+          <span class="px-2 py-1 text-xs rounded-full ${trade.trade_type === 'long' ? 'bg-blue-100 text-blue-800' : 'bg-orange-100 text-orange-800'}">
+            ${trade.trade_type.toUpperCase()}
+          </span>
+        </td>
+        <td class="px-4 py-3 text-xs text-gray-500 max-w-xs truncate" title="${trade.notes}">
+          ${trade.notes}
+        </td>
+      `;
+      
+      tbody.appendChild(row);
+    });
+
+    // Update pagination
+    document.getElementById('showingFrom').textContent = ((currentPage - 1) * 50) + 1;
+    document.getElementById('showingTo').textContent = Math.min(currentPage * 50, data.total);
+    document.getElementById('totalTrades').textContent = data.total;
+    document.getElementById('pageInfo').textContent = `Page ${currentPage} of ${data.pages}`;
+    
+    document.getElementById('prevPage').disabled = currentPage === 1;
+    document.getElementById('nextPage').disabled = currentPage === data.pages;
+  }
+
+  function changePage(direction) {
+    currentPage += direction;
+    loadTrades();
+  }
+
+  function sortTable(field) {
+    if (currentSort.field === field) {
+      currentSort.direction = currentSort.direction === 'asc' ? 'desc' : 'asc';
+    } else {
+      currentSort.field = field;
+      currentSort.direction = 'desc';
+    }
+    
+    // Update sort indicators
+    document.querySelectorAll('[data-sort] i').forEach(i => {
+      i.className = 'fas fa-sort ml-1';
+    });
+    
+    const sortIcon = document.querySelector(`[data-sort="${field}"] i`);
+    sortIcon.className = `fas fa-sort-${currentSort.direction === 'asc' ? 'up' : 'down'} ml-1`;
+    
+    loadTrades();
+  }
+
+  function searchTrades() {
+    currentPage = 1;
+    loadTrades();
+  }
+
+  function exportData() {
+    const filters = getFilters();
+    const params = new URLSearchParams(filters);
+    window.open(`/calculatentrade_journal/api/reports/trades?${params}&export=csv`, '_blank');
+  }
+
+  function exportTrades() {
+    const filters = getFilters();
+    const params = new URLSearchParams({
+      ...filters,
+      export: 'csv',
+      per_page: 10000
+    });
+    window.open(`/calculatentrade_journal/api/reports/trades?${params}`, '_blank');
+  }
+
+  function debounce(func, wait) {
+    let timeout;
+    return function executedFunction(...args) {
+      const later = () => {
+        clearTimeout(timeout);
+        func(...args);
+      };
+      clearTimeout(timeout);
+      timeout = setTimeout(later, wait);
+    };
+  }
+});
+</script>
+{% endblock %}

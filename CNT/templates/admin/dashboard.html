@@ -1,0 +1,154 @@
+{% extends "admin/admin_base.html" %}
+
+{% block title %}Admin Dashboard | CalculatenTrade{% endblock %}
+
+{% block content %}
+<div class="">
+  <div class="page-title">
+    <div class="title_left">
+      <h3>Admin Dashboard</h3>
+    </div>
+  </div>
+
+  <div class="clearfix"></div>
+
+  <div class="row">
+    <div class="col-md-12">
+      <div class="x_panel">
+        <div class="x_title">
+          <h2>System Overview</h2>
+          <div class="clearfix"></div>
+        </div>
+        <div class="x_content">
+          <div class="row">
+            <div class="animated flipInY col-lg-3 col-md-6 col-sm-6">
+              <div class="tile-stats">
+                <div class="icon"><i class="fa fa-ticket"></i></div>
+                <div class="count">{{ coupon_count }}</div>
+                <h3>Coupons</h3>
+                <p>Total active and inactive coupons</p>
+              </div>
+            </div>
+            <div class="animated flipInY col-lg-3 col-md-6 col-sm-6">
+              <div class="tile-stats">
+                <div class="icon"><i class="fa fa-users"></i></div>
+                <div class="count">{{ user_count|default(0) }}</div>
+                <h3>Users</h3>
+                <p>Total CalculatenTrade users</p>
+              </div>
+            </div>
+            <div class="animated flipInY col-lg-3 col-md-6 col-sm-6">
+              <div class="tile-stats">
+                <div class="icon"><i class="fa fa-user-tie"></i></div>
+                <div class="count">{{ employee_count|default(0) }}</div>
+                <h3>Employees</h3>
+                <p>Total employees registered</p>
+              </div>
+            </div>
+            <div class="animated flipInY col-lg-3 col-md-6 col-sm-6">
+              <div class="tile-stats">
+                <div class="icon"><i class="fa fa-chalkboard-teacher"></i></div>
+                <div class="count">{{ mentor_count|default(0) }}</div>
+                <h3>Mentors</h3>
+                <p>Total mentors registered</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="row">
+    <div class="col-md-12">
+      <div class="x_panel">
+        <div class="x_title">
+          <h2>Recent Coupons</h2>
+          <ul class="nav navbar-right panel_toolbox">
+            <li><a href="{{ url_for('admin.coupons') }}" class="btn btn-primary btn-sm">View All</a></li>
+            {% if session.admin_role == 'owner' %}
+            <li><a href="{{ url_for('admin.create_coupon') }}" class="btn btn-success btn-sm">Create New</a></li>
+            {% endif %}
+          </ul>
+          <div class="clearfix"></div>
+        </div>
+        <div class="x_content">
+          <div class="table-responsive">
+            <table class="table table-striped jambo_table">
+              <thead>
+                <tr>
+                  <th>Code</th>
+                  <th>Discount</th>
+                  <th>Status</th>
+                  <th>Created</th>
+                </tr>
+              </thead>
+              <tbody>
+                {% for coupon in coupons[:5] %}
+                <tr>
+                  <td><strong>{{ coupon.code }}</strong></td>
+                  <td>{{ coupon.discount_percent }}%</td>
+                  <td>
+                    <span class="badge {{ 'bg-success' if coupon.active else 'bg-danger' }}">
+                      {{ 'Active' if coupon.active else 'Inactive' }}
+                    </span>
+                  </td>
+                  <td>{{ coupon.created_at[:10] if coupon.created_at else 'N/A' }}</td>
+                </tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  {% if session.admin_role == 'owner' %}
+  <div class="row">
+    <div class="col-md-12">
+      <div class="x_panel">
+        <div class="x_title">
+          <h2>Admin Actions</h2>
+          <div class="clearfix"></div>
+        </div>
+        <div class="x_content">
+          <div class="row">
+            <div class="col-md-3">
+              <a href="{{ url_for('admin.create_user') }}" class="btn btn-primary btn-block mb-3">
+                <i class="fa fa-user-plus me-2"></i> Create Admin User
+              </a>
+            </div>
+            <div class="col-md-3">
+              <a href="{{ url_for('admin.admin_create_employee') }}" class="btn btn-success btn-block mb-3">
+                <i class="fa fa-user-tie me-2"></i> Create Employee
+              </a>
+            </div>
+            <div class="col-md-3">
+              <a href="{{ url_for('admin.employees') }}" class="btn btn-info btn-block mb-3">
+                <i class="fa fa-users me-2"></i> View All Employees
+              </a>
+            </div>
+            <div class="col-md-3">
+              <a href="{{ url_for('admin.create_mentor') }}" class="btn btn-warning btn-block mb-3">
+                <i class="fa fa-chalkboard-teacher me-2"></i> Create Mentor
+              </a>
+            </div>
+            <div class="col-md-3">
+              <a href="{{ url_for('admin.users') }}" class="btn btn-primary btn-block mb-3">
+                <i class="fa fa-users me-2"></i> Manage Users
+              </a>
+            </div>
+            <div class="col-md-3">
+              <a href="{{ url_for('admin.mentors') }}" class="btn btn-info btn-block mb-3">
+                <i class="fa fa-chalkboard-teacher me-2"></i> Manage Mentors
+              </a>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  {% endif %}
+</div>
+{% endblock %}

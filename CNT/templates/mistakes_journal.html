@@ -1,0 +1,604 @@
+{% extends "base_new_journal.html" %}
+
+{% block title %}Trading Mistakes | Calculate N Trade{% endblock %}
+
+{% block content %}
+<div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+  <!-- Header + Controls -->
+  <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-6">
+    <div>
+      <h1 class="text-2xl font-bold text-gray-800 dark:text-white">Trading Mistakes</h1>
+      <p class="text-gray-500 dark:text-gray-400">Track and learn from your trading mistakes — categorize, attach evidence, and measure impact.</p>
+    </div>
+
+    <div class="flex items-center gap-3 w-full md:w-auto">
+      <!-- Search -->
+      <div class="flex items-center bg-white dark:bg-gray-800 border rounded-md px-2 py-1 shadow-sm">
+        <input id="q" type="search" placeholder="Search title, description, tags..." value="{{ request.args.get('q','') }}"
+               class="bg-transparent outline-none px-2 text-sm w-56" />
+        <button id="searchBtn" class="px-2 text-sm">Search</button>
+      </div>
+
+      <!-- Filters -->
+      <select id="filter_category" class="px-3 py-1 border rounded-md bg-white dark:bg-gray-800 text-sm">
+        <option value="">All categories</option>
+        <option value="execution">Execution</option>
+        <option value="analysis">Analysis</option>
+        <option value="risk">Risk</option>
+        <option value="psychology">Psychology</option>
+        <option value="process">Process</option>
+        <option value="other">Other</option>
+      </select>
+
+      <select id="filter_severity" class="px-3 py-1 border rounded-md bg-white dark:bg-gray-800 text-sm">
+        <option value="">All severity</option>
+        <option value="low">Low</option>
+        <option value="medium">Medium</option>
+        <option value="high">High</option>
+        <option value="critical">Critical</option>
+      </select>
+
+      <button id="addMistakeBtn" class="px-4 py-2 bg-primary-light text-white rounded-md shadow hover:bg-primary-dark transition">
+        <i class="fas fa-plus"></i> <span class="ml-2 hidden sm:inline">New</span>
+      </button>
+    </div>
+  </div>
+
+  <!-- Grid / List -->
+  <div id="mistakesContainer" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+    {% if mistakes %}
+      {% for mistake in mistakes %}
+      <div class="bg-white dark:bg-gray-800 rounded-xl shadow p-5 flex flex-col justify-between">
+        <div>
+          <div class="flex items-start justify-between gap-3 mb-2">
+            <div>
+              <h3 class="text-lg font-bold text-gray-800 dark:text-white">{{ mistake.title }}</h3>
+              <div class="flex items-center gap-2 mt-1">
+                <span class="text-xs px-2 py-0.5 rounded-full bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-200">
+                  {{ mistake.category|capitalize }}
+                </span>
+
+                {% if mistake.severity == 'critical' %}
+                  <span class="text-xs px-2 py-0.5 rounded-full bg-red-600 text-white">Critical</span>
+                {% elif mistake.severity == 'high' %}
+                  <span class="text-xs px-2 py-0.5 rounded-full bg-red-400 text-white">High</span>
+                {% elif mistake.severity == 'medium' %}
+                  <span class="text-xs px-2 py-0.5 rounded-full bg-yellow-400 text-white">Medium</span>
+                {% else %}
+                  <span class="text-xs px-2 py-0.5 rounded-full bg-green-400 text-white">Low</span>
+                {% endif %}
+              </div>
+            </div>
+
+            <div class="flex items-center gap-2">
+              {% if mistake.attachments_count and mistake.attachments_count > 0 %}
+              <button class="view-attachments p-2 rounded hover:bg-gray-100 dark:hover:bg-gray-700" data-id="{{ mistake.id }}" title="View Attachments ({{ mistake.attachments_count }})">
+                <i class="fas fa-paperclip text-green-500"></i>
+                <span class="text-xs">{{ mistake.attachments_count }}</span>
+              </button>
+              {% endif %}
+              <button class="edit-mistake p-2 rounded hover:bg-gray-100 dark:hover:bg-gray-700" data-id="{{ mistake.id }}" title="Edit">
+                <i class="fas fa-edit text-blue-500"></i>
+              </button>
+              <button class="delete-mistake p-2 rounded hover:bg-gray-100 dark:hover:bg-gray-700" data-id="{{ mistake.id }}" title="Delete">
+                <i class="fas fa-trash text-red-600"></i>
+              </button>
+            </div>
+          </div>
+
+          <p class="text-gray-600 dark:text-gray-300 text-sm mb-3 line-clamp-4">{{ mistake.description }}</p>
+
+          <!-- Related Trade -->
+          {% if mistake.related_trade %}
+          <div class="mb-3 p-2 bg-blue-50 dark:bg-blue-900/20 rounded border-l-2 border-blue-400">
+            <div class="text-xs text-blue-700 dark:text-blue-300">
+              <i class="fas fa-link mr-1"></i>
+              <strong>Related Trade:</strong> {{ mistake.related_trade.symbol }} - {{ mistake.related_trade.date }} - 
+              {{ mistake.related_trade.trade_type|capitalize }} - 
+              <span class="{{ 'text-green-600' if mistake.related_trade.pnl > 0 else 'text-red-600' }}">₹{{ "%.2f"|format(mistake.related_trade.pnl) }}</span>
+            </div>
+          </div>
+          {% endif %}
+
+          <!-- Tags -->
+          <div class="flex flex-wrap gap-2 mt-2 mb-3">
+            {% if mistake.tags %}
+              {% for t in mistake.tags %}
+                <span class="text-xs px-2 py-0.5 bg-gray-100 dark:bg-gray-700 rounded">{{ t }}</span>
+              {% endfor %}
+            {% endif %}
+          </div>
+        </div>
+
+        <!-- Footer KPIs -->
+        <div class="mt-4 border-t pt-3 flex items-center justify-between text-xs text-gray-500">
+          <div class="flex items-center gap-4">
+            <div class="text-right">
+              <div class="text-[13px]"><strong>P&L:</strong> 
+                {% if mistake.pnl_impact is not none %}
+                  <span class="{{ 'text-red-500' if mistake.pnl_impact < 0 else 'text-green-500' }}">₹{{ "%.2f"|format(mistake.pnl_impact) }}</span>
+                {% else %}
+                  -
+                {% endif %}
+              </div>
+              <div class="text-[12px]"><strong>Risk:</strong> 
+                {% if mistake.risk_at_time is not none %}
+                  ₹{{ "%.2f"|format(mistake.risk_at_time) }}
+                {% else %}
+                  -
+                {% endif %}
+              </div>
+            </div>
+
+            <div class="text-xs">
+              <div><strong>Recurrence:</strong> {{ mistake.recurrence_count or 0 }}</div>
+              <div><strong>Attachments:</strong> {{ mistake.attachments_count or 0 }}</div>
+            </div>
+          </div>
+
+          <div class="text-right">
+            <div class="text-[11px]">{{ mistake.created_at[:10] if mistake.created_at }}</div>
+            {% if mistake.resolved_at %}
+              <div class="text-green-500 text-[11px]">Resolved</div>
+            {% endif %}
+          </div>
+        </div>
+      </div>
+      {% endfor %}
+    {% else %}
+      <div class="col-span-full text-center py-12 bg-white dark:bg-gray-800 rounded-xl shadow">
+        <i class="fas fa-exclamation-triangle text-4xl text-gray-500 mb-4"></i>
+        <h3 class="text-lg font-medium text-gray-900 dark:text-white mb-2">No Mistakes Yet</h3>
+        <p class="text-gray-500 dark:text-gray-400 mb-4">Add your first trading mistake to start learning</p>
+        <button id="addFirstMistakeBtn" class="px-4 py-2 bg-primary-light text-white rounded-md shadow hover:bg-primary-dark transition">
+          Add Your First Mistake
+        </button>
+      </div>
+    {% endif %}
+  </div>
+</div>
+
+<!-- Modal: Add/Edit Mistake -->
+<div id="mistakeModal" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-start md:items-center justify-center z-50 py-8">
+  <div class="bg-white dark:bg-gray-800 rounded-xl shadow-xl w-full max-w-2xl p-6 overflow-auto max-h-[90vh]">
+    <h3 id="modalTitle" class="text-xl font-bold mb-4">Add Mistake</h3>
+
+    <form id="mistakeForm" class="space-y-4" enctype="multipart/form-data">
+      <input type="hidden" id="mistake_id" name="id">
+
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div>
+          <label for="title" class="block text-sm font-medium">Title</label>
+          <input type="text" id="title" name="title" required class="w-full px-3 py-2 border rounded-md bg-white dark:bg-gray-900">
+        </div>
+
+        <div>
+          <label for="reporter_id" class="block text-sm font-medium">Reporter (optional)</label>
+          <input type="text" id="reporter_id" name="reporter_id" class="w-full px-3 py-2 border rounded-md bg-white dark:bg-gray-900" placeholder="username or id">
+        </div>
+
+        <div>
+          <label for="category" class="block text-sm font-medium">Category</label>
+          <select id="category" name="category" class="w-full px-3 py-2 border rounded-md bg-white dark:bg-gray-900">
+            <option value="execution">Execution</option>
+            <option value="analysis">Analysis</option>
+            <option value="risk">Risk</option>
+            <option value="psychology">Psychology</option>
+            <option value="process">Process</option>
+            <option value="other">Other</option>
+          </select>
+        </div>
+
+        <div>
+          <label for="severity" class="block text-sm font-medium">Severity</label>
+          <select id="severity" name="severity" class="w-full px-3 py-2 border rounded-md bg-white dark:bg-gray-900">
+            <option value="low">Low</option>
+            <option value="medium" selected>Medium</option>
+            <option value="high">High</option>
+            <option value="critical">Critical</option>
+          </select>
+        </div>
+
+        <div>
+          <label for="related_trade_id" class="block text-sm font-medium">Related Trade (optional)</label>
+          <select id="related_trade_id" name="related_trade_id" class="w-full px-3 py-2 border rounded-md bg-white dark:bg-gray-900">
+            <option value="">Select a trade...</option>
+          </select>
+        </div>
+
+        <div>
+          <label for="pnl_impact" class="block text-sm font-medium">P&L Impact (₹)</label>
+          <input type="number" step="0.01" id="pnl_impact" name="pnl_impact" class="w-full px-3 py-2 border rounded-md bg-white dark:bg-gray-900">
+        </div>
+
+        <div>
+          <label for="risk_at_time" class="block text-sm font-medium">Risk at Time (₹)</label>
+          <input type="number" step="0.01" id="risk_at_time" name="risk_at_time" class="w-full px-3 py-2 border rounded-md bg-white dark:bg-gray-900">
+        </div>
+
+        <div>
+          <label for="confidence" class="block text-sm font-medium">Confidence (0-100)</label>
+          <input type="number" min="0" max="100" id="confidence" name="confidence" class="w-full px-3 py-2 border rounded-md bg-white dark:bg-gray-900">
+        </div>
+      </div>
+
+      <div>
+        <label for="description" class="block text-sm font-medium">Description</label>
+        <textarea id="description" name="description" rows="4" required class="w-full px-3 py-2 border rounded-md bg-white dark:bg-gray-900"></textarea>
+      </div>
+
+
+
+      <!-- Tags input -->
+      <div>
+        <label class="block text-sm font-medium mb-2">Tags</label>
+        <div class="flex gap-2 items-center">
+          <input id="tag_input" type="text" placeholder="add tag and press Enter" class="px-3 py-2 border rounded-md bg-white dark:bg-gray-900 w-full">
+          <button id="addTagBtn" type="button" class="px-3 py-2 bg-gray-200 rounded-md">Add</button>
+        </div>
+        <div id="tagsArea" class="flex flex-wrap gap-2 mt-2"></div>
+      </div>
+
+
+
+      <!-- Attachments -->
+      <div>
+        <label for="attachments" class="block text-sm font-medium">Attachments (screenshots / logs)</label>
+        <input id="attachments" name="attachments" type="file" multiple class="mt-1" />
+        <div id="existingAttachments" class="mt-2 text-xs text-gray-500"></div>
+      </div>
+
+      <div class="flex justify-end space-x-3">
+        <button type="button" id="cancelMistakeBtn" class="px-4 py-2 bg-gray-200 rounded-md">Cancel</button>
+        <button type="submit" id="saveBtn" class="px-4 py-2 bg-blue-600 text-white rounded-md">Save Mistake</button>
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+/* Endpoint templates — replace '0' with real id when used */
+const URLS = {
+  list_mistakes: "{{ url_for('calculatentrade.api_get_mistakes') }}",    // supports ?q=&category=&severity=
+  get_mistake: "{{ url_for('calculatentrade.api_get_mistake', mistake_id=0) }}",
+  add_mistake: "{{ url_for('calculatentrade.api_add_mistake') }}",
+  update_mistake: "{{ url_for('calculatentrade.api_update_mistake', mistake_id=0) }}",
+  delete_mistake: "{{ url_for('calculatentrade.api_delete_mistake', mistake_id=0) }}",
+  trades_for_mistakes: "{{ url_for('calculatentrade.api_get_trades_for_mistakes') }}"
+};
+
+document.addEventListener("DOMContentLoaded", () => {
+  // Elements
+  const modal = document.getElementById("mistakeModal");
+  const form = document.getElementById("mistakeForm");
+  const modalTitle = document.getElementById("modalTitle");
+  const saveBtn = document.getElementById("saveBtn");
+  const cancelBtn = document.getElementById("cancelMistakeBtn");
+  const attachmentsInput = document.getElementById("attachments");
+  const tagsArea = document.getElementById("tagsArea");
+  const tagInput = document.getElementById("tag_input");
+  const addTagBtn = document.getElementById("addTagBtn");
+
+  let editingId = null;
+  let tags = [];
+  let tradesData = [];
+
+  const openModal = () => { modal.classList.remove("hidden"); window.scrollTo(0,0); };
+  const closeModal = () => { modal.classList.add("hidden"); resetForm(); };
+
+  // Load trades for dropdown
+  async function loadTrades() {
+    try {
+      const res = await fetch(URLS.trades_for_mistakes);
+      if (!res.ok) throw new Error('Failed to load trades');
+      const data = await res.json();
+      if (data.success) {
+        tradesData = data.trades;
+        populateTradesDropdown();
+      }
+    } catch (err) {
+      console.error('Failed to load trades:', err);
+    }
+  }
+
+  function populateTradesDropdown() {
+    const select = document.getElementById('related_trade_id');
+    // Clear existing options except the first one
+    while (select.children.length > 1) {
+      select.removeChild(select.lastChild);
+    }
+    
+    // Add trade options
+    tradesData.forEach(trade => {
+      const option = document.createElement('option');
+      option.value = trade.id;
+      option.textContent = trade.identifier;
+      select.appendChild(option);
+    });
+  }
+
+  function resetForm() {
+    form.reset();
+    editingId = null;
+    tags = [];
+    renderTags();
+    document.getElementById("existingAttachments").innerHTML = "";
+    document.getElementById("mistake_id").value = "";
+  }
+
+  function renderTags() {
+    tagsArea.innerHTML = "";
+    tags.forEach((t, i) => {
+      const chip = document.createElement("span");
+      chip.className = "text-xs px-2 py-0.5 bg-gray-100 dark:bg-gray-700 rounded flex items-center gap-2";
+      chip.innerHTML = `<span>${t}</span> <button type="button" data-i="${i}" class="ml-2 text-gray-500 remove-tag-btn">&times;</button>`;
+      tagsArea.appendChild(chip);
+    });
+    // attach remove handlers
+    document.querySelectorAll(".remove-tag-btn").forEach(b => {
+      b.addEventListener("click", (e) => {
+        const i = Number(b.dataset.i);
+        tags.splice(i,1);
+        renderTags();
+      });
+    });
+  }
+
+  // Add tag via button or Enter
+  addTagBtn.addEventListener("click", () => {
+    const v = tagInput.value.trim();
+    if (!v) return;
+    if (!tags.includes(v)) tags.push(v);
+    tagInput.value = "";
+    renderTags();
+  });
+  tagInput.addEventListener("keydown", (e) => {
+    if (e.key === "Enter") { e.preventDefault(); addTagBtn.click(); }
+  });
+
+  // Open new modal
+  document.getElementById("addMistakeBtn")?.addEventListener("click", () => {
+    resetForm();
+    modalTitle.textContent = "Add Mistake";
+    saveBtn.textContent = "Save Mistake";
+    loadTrades().then(() => openModal());
+  });
+  document.getElementById("addFirstMistakeBtn")?.addEventListener("click", () => {
+    document.getElementById("addMistakeBtn").click();
+  });
+
+  // Load trades on page load
+  loadTrades();
+
+  // Edit buttons
+  document.querySelectorAll(".edit-mistake").forEach(btn => {
+    btn.addEventListener("click", async () => {
+      const id = btn.dataset.id;
+      if (!id) { alert("Missing id"); return; }
+      const url = URLS.get_mistake.replace('0', id);
+      try {
+        const res = await fetch(url);
+        if (!res.ok) throw new Error('Server returned ' + res.status);
+        const data = await res.json();
+        // populate
+        editingId = id;
+        document.getElementById("mistake_id").value = data.id || id;
+        document.getElementById("title").value = data.title || "";
+        document.getElementById("description").value = data.description || "";
+        // lesson field removed from model
+        document.getElementById("reporter_id").value = data.reporter_id || "";
+        document.getElementById("related_trade_id").value = data.related_trade_id || "";
+        document.getElementById("category").value = data.category || "other";
+        document.getElementById("severity").value = data.severity || "medium";
+        document.getElementById("pnl_impact").value = data.pnl_impact ?? "";
+        document.getElementById("risk_at_time").value = data.risk_at_time ?? "";
+        document.getElementById("confidence").value = data.confidence ?? "";
+
+
+        // tags
+        tags = data.tags || [];
+        renderTags();
+
+        // attachments
+        const attArea = document.getElementById("existingAttachments");
+        attArea.innerHTML = "";
+        if (data.attachments && data.attachments.length) {
+          data.attachments.forEach(a => {
+            const ael = document.createElement("div");
+            ael.className = "text-xs";
+            ael.innerHTML = `<a href="${a.url}" target="_blank" class="underline">${a.filename}</a> <span class="text-gray-400">(${a.size || '-'} bytes)</span>`;
+            attArea.appendChild(ael);
+          });
+        }
+
+        modalTitle.textContent = "Edit Mistake";
+        saveBtn.textContent = "Update Mistake";
+        loadTrades().then(() => openModal());
+      } catch (err) {
+        console.error(err);
+        alert("Failed to load mistake: " + (err.message || err));
+      }
+    });
+  });
+
+  // View attachments
+  document.querySelectorAll(".view-attachments").forEach(btn => {
+    btn.addEventListener("click", async () => {
+      const id = btn.dataset.id;
+      if (!id) { alert("Missing id"); return; }
+      const url = URLS.get_mistake.replace('0', id);
+      try {
+        const res = await fetch(url);
+        if (!res.ok) throw new Error('Server returned ' + res.status);
+        const data = await res.json();
+        
+        if (data.attachments && data.attachments.length) {
+          let attachmentHtml = '<div class="space-y-2">';
+          data.attachments.forEach(a => {
+            const isImage = a.mime_type && a.mime_type.startsWith('image/');
+            if (isImage) {
+              attachmentHtml += `
+                <div class="border rounded p-2">
+                  <div class="text-sm font-medium">${a.filename}</div>
+                  <img src="${a.url}" alt="${a.filename}" class="max-w-full h-auto mt-2 rounded" style="max-height: 300px;">
+                  <div class="text-xs text-gray-500 mt-1">${a.size || '-'} bytes</div>
+                </div>`;
+            } else {
+              attachmentHtml += `
+                <div class="border rounded p-2">
+                  <a href="${a.url}" target="_blank" class="text-blue-500 underline">${a.filename}</a>
+                  <div class="text-xs text-gray-500">${a.size || '-'} bytes</div>
+                </div>`;
+            }
+          });
+          attachmentHtml += '</div>';
+          
+          // Create modal for attachments
+          const modal = document.createElement('div');
+          modal.className = 'fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50';
+          modal.innerHTML = `
+            <div class="bg-white dark:bg-gray-800 rounded-xl shadow-xl w-full max-w-2xl p-6 max-h-[80vh] overflow-auto">
+              <div class="flex justify-between items-center mb-4">
+                <h3 class="text-xl font-bold">Attachments - ${data.title}</h3>
+                <button class="close-attachments text-gray-500 hover:text-gray-700">&times;</button>
+              </div>
+              ${attachmentHtml}
+            </div>`;
+          
+          document.body.appendChild(modal);
+          
+          modal.querySelector('.close-attachments').addEventListener('click', () => {
+            document.body.removeChild(modal);
+          });
+          
+          modal.addEventListener('click', (e) => {
+            if (e.target === modal) {
+              document.body.removeChild(modal);
+            }
+          });
+        } else {
+          alert('No attachments found');
+        }
+      } catch (err) {
+        console.error(err);
+        alert("Failed to load attachments: " + (err.message || err));
+      }
+    });
+  });
+
+  // Delete
+  document.querySelectorAll(".delete-mistake").forEach(btn => {
+    btn.addEventListener("click", async () => {
+      const id = btn.dataset.id;
+      if (!id) { alert("Missing id"); return; }
+      if (!confirm("Are you sure you want to delete this mistake? (This performs a soft-delete)")) return;
+      const url = URLS.delete_mistake.replace('0', id);
+      try {
+        const res = await fetch(url, { method: "DELETE" });
+        if (!res.ok) {
+          const txt = await res.text().catch(()=>null);
+          throw new Error('Server returned ' + res.status + (txt ? (': ' + txt) : ''));
+        }
+        window.location.reload();
+      } catch (err) {
+        console.error(err);
+        alert("Delete failed: " + (err.message || err));
+      }
+    });
+  });
+
+  // Form submit (create/update) — supports attachments via FormData
+  form.addEventListener("submit", async (e) => {
+    e.preventDefault();
+
+    const title = document.getElementById("title").value.trim();
+    const description = document.getElementById("description").value.trim();
+    if (!title) { alert("Title is required"); return; }
+    if (!description) { alert("Description is required"); return; }
+
+    // build formdata
+    const fd = new FormData();
+    fd.append('title', title);
+    fd.append('description', description);
+    // lesson field removed from model
+    fd.append('reporter_id', document.getElementById("reporter_id").value.trim() || "");
+    fd.append('related_trade_id', document.getElementById("related_trade_id").value || "");
+    fd.append('category', document.getElementById("category").value || "other");
+    fd.append('severity', document.getElementById("severity").value || "medium");
+    fd.append('pnl_impact', document.getElementById("pnl_impact").value || "");
+    fd.append('risk_at_time', document.getElementById("risk_at_time").value || "");
+    fd.append('confidence', document.getElementById("confidence").value || "");
+    fd.append('metadata', '{}');
+
+    // tags as JSON string
+    fd.append('tags', JSON.stringify(tags));
+
+    // attachments
+    const files = attachmentsInput.files;
+    for (let i=0;i<files.length;i++){
+      fd.append('attachments', files[i]);
+    }
+
+    const isUpdate = Boolean(editingId);
+    const url = isUpdate ? URLS.update_mistake.replace('0', editingId) : URLS.add_mistake;
+    const method = isUpdate ? 'PUT' : 'POST';
+
+    try {
+      const res = await fetch(url, {
+        method,
+        body: fd
+      });
+      if (!res.ok) {
+        const txt = await res.text().catch(()=>null);
+        throw new Error('Server returned ' + res.status + (txt ? (': ' + txt) : ''));
+      }
+      closeModal();
+      window.location.reload();
+    } catch (err) {
+      console.error(err);
+      alert("Save failed: " + (err.message || err));
+    }
+  });
+
+  if (cancelBtn) cancelBtn.addEventListener("click", () => { closeModal(); });
+
+  // Search & filters
+  const qInput = document.getElementById("q");
+  const searchBtn = document.getElementById("searchBtn");
+  const catFilter = document.getElementById("filter_category");
+  const sevFilter = document.getElementById("filter_severity");
+
+  function buildListUrl() {
+    const params = new URLSearchParams();
+    if (qInput.value.trim()) params.set('q', qInput.value.trim());
+    if (catFilter.value) params.set('category', catFilter.value);
+    if (sevFilter.value) params.set('severity', sevFilter.value);
+    return URLS.list_mistakes + '?' + params.toString();
+  }
+
+  async function reloadList() {
+    const url = buildListUrl();
+    try {
+      const res = await fetch(url);
+      if (!res.ok) throw new Error('Server returned ' + res.status);
+      const payload = await res.json();
+      // simple reload by redirecting with params so server-side templating renders correct list
+      // If you prefer client-side rendering, implement DOM patching here.
+      // We'll redirect so backend and pagination logic remain consistent:
+      window.location.href = url;
+    } catch (err) {
+      console.error(err);
+      alert("Failed to fetch list: " + (err.message || err));
+    }
+  }
+
+  searchBtn.addEventListener("click", (e) => { e.preventDefault(); reloadList(); });
+  qInput.addEventListener("keydown", (e) => { if (e.key === "Enter") { e.preventDefault(); reloadList(); } });
+  catFilter.addEventListener("change", reloadList);
+  sevFilter.addEventListener("change", reloadList);
+
+}); // DOMContentLoaded
+</script>
+{% endblock %}

@@ -1,0 +1,105 @@
+{% extends "simple_base.html" %}
+
+{% block title %}Home - Calculate N Trade{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-12">
+        <div class="jumbotron bg-primary text-white text-center py-5 mb-4">
+            <h1 class="display-4">Welcome to Calculate N Trade</h1>
+            <p class="lead">Your comprehensive trading platform for risk management and trade analysis</p>
+            {% if not current_user.is_authenticated %}
+            <div class="mt-4">
+                <a class="btn btn-light btn-lg me-3" href="{{ url_for('login') }}">Login</a>
+                <a class="btn btn-outline-light btn-lg" href="{{ url_for('register') }}">Register</a>
+            </div>
+            {% else %}
+            <div class="mt-4">
+                {% if current_user.has_active_subscription() %}
+                <a class="btn btn-light btn-lg" href="{{ url_for('calculatentrade.dashboard') }}">Go to Dashboard</a>
+                <p class="mt-2 text-light"><small>✓ Premium Active until {{ current_user.subscription_expires.strftime('%B %d, %Y') if current_user.subscription_expires else 'Lifetime' }}</small></p>
+                {% else %}
+                <a class="btn btn-warning btn-lg" href="{{ url_for('subscription') }}">Upgrade to Premium</a>
+                <p class="mt-2 text-light"><small>Limited access - Upgrade for full features</small></p>
+                {% endif %}
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-md-4 mb-4">
+        <div class="card h-100">
+            <div class="card-body text-center">
+                <i class="fas fa-calculator fa-3x text-primary mb-3"></i>
+                <h5 class="card-title">Trading Calculators</h5>
+                <p class="card-text">Calculate risk, reward, and position sizes for different trading strategies including Intraday, Delivery, F&O, MTF, and Swing trading.</p>
+                {% if current_user.is_authenticated and current_user.has_active_subscription() %}
+                <a href="{{ url_for('calculator') }}" class="btn btn-primary">Explore Calculators</a>
+                {% else %}
+                <a href="{{ url_for('subscription') }}" class="btn btn-outline-primary">Upgrade to Access</a>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-4 mb-4">
+        <div class="card h-100">
+            <div class="card-body text-center">
+                <i class="fas fa-journal-whills fa-3x text-success mb-3"></i>
+                <h5 class="card-title">Trading Journal</h5>
+                <p class="card-text">Track your trades, analyze performance, manage strategies, and learn from mistakes with our comprehensive trading journal.</p>
+                {% if current_user.is_authenticated and current_user.has_active_subscription() %}
+                <a href="{{ url_for('calculatentrade.dashboard') }}" class="btn btn-success">Open Journal</a>
+                {% elif current_user.is_authenticated %}
+                <a href="{{ url_for('subscription') }}" class="btn btn-outline-success">Upgrade to Access</a>
+                {% else %}
+                <a href="{{ url_for('login') }}" class="btn btn-success">Login to Access</a>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-4 mb-4">
+        <div class="card h-100">
+            <div class="card-body text-center">
+                <i class="fas fa-chart-line fa-3x text-info mb-3"></i>
+                <h5 class="card-title">Market Analysis</h5>
+                <p class="card-text">Get real-time market data, pivot points, and technical analysis tools to make informed trading decisions.</p>
+                <a href="#" class="btn btn-info">Coming Soon</a>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row mt-5">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0">Key Features</h5>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-6">
+                        <ul class="list-unstyled">
+                            <li><i class="fas fa-check text-success me-2"></i>Risk & Reward Calculators</li>
+                            <li><i class="fas fa-check text-success me-2"></i>Position Size Management</li>
+                            <li><i class="fas fa-check text-success me-2"></i>Trade Performance Tracking</li>
+                            <li><i class="fas fa-check text-success me-2"></i>Strategy Management</li>
+                        </ul>
+                    </div>
+                    <div class="col-md-6">
+                        <ul class="list-unstyled">
+                            <li><i class="fas fa-check text-success me-2"></i>Mistake Analysis & Learning</li>
+                            <li><i class="fas fa-check text-success me-2"></i>Trading Rules & Compliance</li>
+                            <li><i class="fas fa-check text-success me-2"></i>Performance Reports</li>
+                            <li><i class="fas fa-check text-success me-2"></i>Real-time Market Data</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,507 @@
+{% extends "base.html" %}
+
+{% block title %}F&O Trade Calculator v2{% endblock %}
+
+{% block content %}
+<div class="right_col" role="main">
+  <div class="">
+    <div class="page-title">
+      <div class="title_left">
+        <h3>F&O Trade Calculator</h3>
+      </div>
+    </div>
+    <div class="clearfix"></div>
+
+    <div class="row">
+      <div class="col-md-12 col-sm-12">
+        <div class="x_panel">
+          <div class="x_title">
+            <h2>F&O Trade Parameters</h2>
+            <div class="clearfix"></div>
+          </div>
+          <div class="x_content">
+            <p class="text-muted font-13 m-b-30">Calculate precise entry, exit, and risk parameters for your F&O trades with derivative name and lot size support</p>
+            
+            <form id="tradeForm" class="form-horizontal form-label-left" autocomplete="off">
+              <!-- Trade Type Selection -->
+              <div class="form-group row">
+                <label class="control-label col-md-3 col-sm-3">Trade Type</label>
+                <div class="col-md-9 col-sm-9">
+                  <div class="trade-type-selector">
+                    <button type="button" class="trade-type-btn buy-btn active" data-type="buy">
+                      <i class="fa fa-arrow-up"></i> BUY
+                    </button>
+                    <button type="button" class="trade-type-btn sell-btn" data-type="sell">
+                      <i class="fa fa-arrow-down"></i> SELL
+                    </button>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Trade Parameters Section -->
+              <div class="form-group row">
+                <label class="control-label col-md-3 col-sm-3" for="derivativeName">Derivative Name</label>
+                <div class="col-md-9 col-sm-9">
+                  <input type="text" class="form-control" id="derivativeName" required placeholder="e.g., NIFTY24DEC21000CE, BANKNIFTY24DEC50000PE" />
+                </div>
+              </div>
+
+              <div class="form-group row">
+                <label class="control-label col-md-3 col-sm-3" for="avgPrice">Average Price</label>
+                <div class="col-md-9 col-sm-9">
+                  <input type="number" step="0.01" class="form-control" id="avgPrice" required placeholder="Enter average price per share" />
+                </div>
+              </div>
+
+              <div class="form-group row">
+                <label class="control-label col-md-3 col-sm-3" for="lotSize">Lot Size</label>
+                <div class="col-md-9 col-sm-9">
+                  <input type="number" class="form-control" id="lotSize" value="25" placeholder="Lot size (e.g., 25, 50, 75)" />
+                </div>
+              </div>
+
+              <div class="form-group row">
+                <label class="control-label col-md-3 col-sm-3" for="numLots">Number of Lots</label>
+                <div class="col-md-9 col-sm-9">
+                  <input type="number" class="form-control" id="numLots" value="1" placeholder="Number of lots to trade" />
+                </div>
+              </div>
+
+              <div class="form-group row">
+                <label class="control-label col-md-3 col-sm-3" for="expectedReturn">Expected Return (%)</label>
+                <div class="col-md-9 col-sm-9">
+                  <input type="number" step="0.1" class="form-control" id="expectedReturn" value="2.5" />
+                </div>
+              </div>
+
+              <div class="form-group row">
+                <label class="control-label col-md-3 col-sm-3" for="riskPercent">Risk (%)</label>
+                <div class="col-md-9 col-sm-9">
+                  <input type="number" step="0.1" class="form-control" id="riskPercent" value="2.5" />
+                </div>
+              </div>
+
+              <div class="form-group row">
+                <label class="control-label col-md-3 col-sm-3" for="comment">Trade Notes</label>
+                <div class="col-md-9 col-sm-9">
+                  <input type="text" class="form-control" id="comment" placeholder="Stock name, strategy, or comments..." />
+                </div>
+              </div>
+
+              <!-- Action Buttons -->
+              <div class="ln_solid"></div>
+              <div class="form-group row">
+                <div class="col-md-9 col-sm-9 offset-md-3">
+                  <button type="button" class="btn btn-success" onclick="calculate()"><i class="fa fa-calculator"></i> Calculate Trade</button>
+                  <button type="button" class="btn btn-warning" onclick="resetForm()"><i class="fa fa-refresh"></i> Reset</button>
+                  <button type="button" class="btn btn-primary" onclick="window.location.href='/saved_fno'"><i class="fa fa-list"></i> View Saved Trades</button>
+                </div>
+              </div>
+            </form>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Results Output Section -->
+    <div class="row" id="output" style="display: none;">
+      <div class="col-md-12 col-sm-12">
+        <div class="x_panel">
+          <div class="x_title">
+            <h2>F&O Trade Results <small id="resultTradeType" class="label label-success">BUY</small></h2>
+            <div class="clearfix"></div>
+          </div>
+          <div class="x_content">
+            <!-- Lot Information -->
+            <div class="col-md-12 col-sm-12">
+              <div class="x_panel tile">
+                <div class="x_title">
+                  <h2><i class="fa fa-layer-group"></i> Lot Information</h2>
+                  <div class="clearfix"></div>
+                </div>
+                <div class="x_content">
+                  <div class="row tile_count">
+                    <div class="col-md-3 col-sm-6 tile_stats_count">
+                      <span class="count_top"><i class="fa fa-cubes"></i> Total Quantity</span>
+                      <div class="count" id="totalQuantity">0</div>
+                    </div>
+                    <div class="col-md-3 col-sm-6 tile_stats_count">
+                      <span class="count_top"><i class="fa fa-line-chart"></i> Profit Per Lot</span>
+                      <div class="count green" id="profitPerLot">₹0</div>
+                    </div>
+                    <div class="col-md-3 col-sm-6 tile_stats_count">
+                      <span class="count_top"><i class="fa fa-exclamation-triangle"></i> Risk Per Lot</span>
+                      <div class="count red" id="riskPerLot">₹0</div>
+                    </div>
+                    <div class="col-md-3 col-sm-6 tile_stats_count">
+                      <span class="count_top"><i class="fa fa-money"></i> Capital Per Lot</span>
+                      <div class="count" id="capitalPerLot">₹0</div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Trade Results -->
+            <div class="row">
+              <div class="col-md-4 col-sm-6">
+                <div class="pricing">
+                  <div class="title">
+                    <h2>Target Price</h2>
+                    <h1 id="targetPrice" class="green">₹0.00</h1>
+                  </div>
+                </div>
+              </div>
+
+              <div class="col-md-4 col-sm-6">
+                <div class="pricing">
+                  <div class="title">
+                    <h2>Stop-Loss Price</h2>
+                    <h1 id="stopLossPrice" class="red">₹0.00</h1>
+                  </div>
+                </div>
+              </div>
+
+              <div class="col-md-4 col-sm-6">
+                <div class="pricing">
+                  <div class="title">
+                    <h2>Expected Profit</h2>
+                    <h1 id="expectedProfit" class="green">₹0.00</h1>
+                  </div>
+                </div>
+              </div>
+
+              <div class="col-md-4 col-sm-6">
+                <div class="pricing">
+                  <div class="title">
+                    <h2>Maximum Risk</h2>
+                    <h1 id="maxRisk" class="red">₹0.00</h1>
+                  </div>
+                </div>
+              </div>
+
+              <div class="col-md-4 col-sm-6">
+                <div class="pricing">
+                  <div class="title">
+                    <h2>Capital Used</h2>
+                    <h1 id="capitalUsed">₹0.00 <span class="label label-primary">No Leverage</span></h1>
+                  </div>
+                </div>
+              </div>
+
+              <div class="col-md-4 col-sm-6">
+                <div class="pricing">
+                  <div class="title">
+                    <h2>Risk-Reward Ratio</h2>
+                    <h1 id="riskReward">0.00 : 1</h1>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Trade Notes -->
+            <div class="row">
+              <div class="col-md-12">
+                <div class="x_panel">
+                  <div class="x_title">
+                    <h2>Trade Notes</h2>
+                    <div class="clearfix"></div>
+                  </div>
+                  <div class="x_content">
+                    <blockquote id="resultComment">No notes provided</blockquote>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Action Buttons -->
+            <div class="row">
+              <div class="col-md-12 text-center">
+                <button type="button" class="btn btn-success" onclick="saveAndReset()"><i class="fa fa-save"></i> Save & Reset</button>
+                <button type="button" class="btn btn-info" onclick="copyResults()"><i class="fa fa-copy"></i> Copy Results</button>
+                <button type="button" class="btn btn-primary" onclick="window.location.href='/saved_fno'"><i class="fa fa-list"></i> View Saved Trades</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+  const $ = id => document.getElementById(id);
+  let resultData = null;
+  let currentTradeType = 'buy';
+
+  function calculate() {
+    const derivativeName = $('derivativeName').value.trim();
+    const avgPrice = parseFloat($('avgPrice').value);
+    const lotSize = parseInt($('lotSize').value) || 25;
+    const numLots = parseInt($('numLots').value) || 1;
+    const expectedReturn = parseFloat($('expectedReturn').value);
+    const riskPercent = parseFloat($('riskPercent').value);
+    const comment = $('comment').value.trim();
+
+    if (!derivativeName || isNaN(avgPrice) || isNaN(expectedReturn) || isNaN(riskPercent)) {
+      new PNotify({
+        title: 'Validation Error',
+        text: 'Please enter derivative name and valid numbers in all fields.',
+        type: 'error',
+        styling: 'bootstrap3'
+      });
+      return;
+    }
+
+    const totalQuantity = lotSize * numLots;
+    const capital_used = avgPrice * totalQuantity;
+    const target_profit = capital_used * (expectedReturn / 100);
+    const max_risk = capital_used * (riskPercent / 100);
+    const move_per_share_up = target_profit / totalQuantity;
+    const move_per_share_down = max_risk / totalQuantity;
+
+    let target_price, stop_loss_price;
+
+    if (currentTradeType === 'buy') {
+      target_price = avgPrice + move_per_share_up;
+      stop_loss_price = avgPrice - move_per_share_down;
+    } else {
+      target_price = avgPrice - move_per_share_up;
+      stop_loss_price = avgPrice + move_per_share_down;
+    }
+
+    const rr_ratio = max_risk === 0 ? '∞' : (target_profit / max_risk).toFixed(2);
+
+    // Calculate per lot values
+    const profitPerLot = target_profit / numLots;
+    const riskPerLot = max_risk / numLots;
+    const capitalPerLot = capital_used / numLots;
+
+    resultData = {
+      trade_type: currentTradeType,
+      avg_price: avgPrice,
+      quantity: totalQuantity,
+      expected_return: expectedReturn,
+      risk_percent: riskPercent,
+      capital_used,
+      target_price,
+      stop_loss_price,
+      total_reward: target_profit,
+      total_risk: max_risk,
+      rr_ratio,
+      comment,
+      symbol: derivativeName,
+      lot_size: lotSize
+    };
+
+    // Update lot information
+    $('totalQuantity').textContent = totalQuantity;
+    $('profitPerLot').textContent = `₹${profitPerLot.toFixed(2)}`;
+    $('riskPerLot').textContent = `₹${riskPerLot.toFixed(2)}`;
+    $('capitalPerLot').textContent = `₹${capitalPerLot.toFixed(2)}`;
+
+    // Update main results
+    $('targetPrice').textContent = `₹${target_price.toFixed(2)}`;
+    $('stopLossPrice').textContent = `₹${stop_loss_price.toFixed(2)}`;
+    $('expectedProfit').textContent = `₹${target_profit.toFixed(2)}`;
+    $('maxRisk').textContent = `₹${max_risk.toFixed(2)}`;
+    $('capitalUsed').innerHTML = `₹${capital_used.toFixed(2)} <span class="label label-primary">No Leverage</span>`;
+    $('riskReward').textContent = `${rr_ratio} : 1`;
+    $('resultComment').textContent = comment || 'No notes provided';
+    
+    // Update trade type badge
+    $('resultTradeType').textContent = currentTradeType.toUpperCase();
+    $('resultTradeType').className = currentTradeType === 'buy' ? 'label label-success' : 'label label-danger';
+
+    $('output').style.display = 'block';
+    
+    // Scroll to results
+    $('output').scrollIntoView({ behavior: 'smooth' });
+  }
+
+  function resetForm() {
+    resultData = null;
+    $('derivativeName').value = '';
+    $('avgPrice').value = '';
+    $('lotSize').value = '25';
+    $('numLots').value = '1';
+    $('expectedReturn').value = '2.5';
+    $('riskPercent').value = '2.5';
+    $('comment').value = '';
+    $('output').style.display = 'none';
+  }
+
+  async function saveAndReset() {
+    if (!resultData) {
+      calculate();
+      if (!resultData) {
+        new PNotify({
+          title: 'Calculation Error',
+          text: 'Failed to calculate. Please check inputs.',
+          type: 'error',
+          styling: 'bootstrap3'
+        });
+        return;
+      }
+    }
+
+    try {
+      const response = await fetch('/save_fno_result', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify(resultData)
+      });
+      if (response.ok) {
+        new PNotify({
+          title: 'Success',
+          text: 'F&O trade saved successfully!',
+          type: 'success',
+          styling: 'bootstrap3'
+        });
+        resetForm();
+      } else {
+        new PNotify({
+          title: 'Error',
+          text: 'Failed to save. Try again.',
+          type: 'error',
+          styling: 'bootstrap3'
+        });
+      }
+    } catch (error) {
+      console.error('Error saving:', error);
+      new PNotify({
+        title: 'Error',
+        text: 'Error saving trade. Check console for details.',
+        type: 'error',
+        styling: 'bootstrap3'
+      });
+    }
+  }
+
+  // Copy results to clipboard
+  function copyResults() {
+    if (!resultData) {
+      new PNotify({
+        title: 'Warning',
+        text: 'Please calculate first.',
+        type: 'warning',
+        styling: 'bootstrap3'
+      });
+      return;
+    }
+    const txt = `F&O Trade\nDerivative: ${resultData.symbol}\nTrade Type: ${resultData.trade_type.toUpperCase()}\nAverage Price: ₹${resultData.avg_price}\nQuantity: ${resultData.quantity}\nLot Size: ${resultData.lot_size}\nExpected Return: ${resultData.expected_return}%\nRisk Percent: ${resultData.risk_percent}%\nTarget Price: ₹${resultData.target_price.toFixed(2)}\nStop Loss Price: ₹${resultData.stop_loss_price.toFixed(2)}\nExpected Profit: ₹${resultData.total_reward.toFixed(2)}\nMax Risk: ₹${resultData.total_risk.toFixed(2)}\nCapital Used: ₹${resultData.capital_used.toFixed(2)} (No Leverage)\nRisk-Reward Ratio: ${resultData.rr_ratio} : 1\nNotes: ${resultData.comment}`;
+
+    navigator.clipboard.writeText(txt).then(() => {
+      new PNotify({
+        title: 'Success',
+        text: 'F&O results copied to clipboard!',
+        type: 'info',
+        styling: 'bootstrap3'
+      });
+    });
+  }
+
+  function selectTradeType(type) {
+    currentTradeType = type;
+    
+    document.querySelectorAll('.trade-type-btn').forEach(btn => {
+      btn.classList.remove('active');
+    });
+    document.querySelector(`[data-type="${type}"]`).classList.add('active');
+  }
+
+  document.addEventListener('DOMContentLoaded', () => {
+    document.querySelectorAll('.trade-type-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        selectTradeType(btn.dataset.type);
+      });
+    });
+  });
+</script>
+
+<style>
+  .trade-type-selector {
+    display: flex;
+    gap: 10px;
+    margin-top: 8px;
+  }
+  
+  .trade-type-btn {
+    flex: 1;
+    padding: 12px 20px;
+    border: 2px solid transparent;
+    border-radius: 8px;
+    font-weight: bold;
+    font-size: 14px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+  }
+  
+  .buy-btn {
+    background: rgba(26, 187, 156, 0.1);
+    color: #1ABB9C;
+    border-color: rgba(26, 187, 156, 0.3);
+  }
+  
+  .buy-btn.active {
+    background: #1ABB9C;
+    color: #fff;
+    border-color: #1ABB9C;
+  }
+  
+  .sell-btn {
+    background: rgba(231, 76, 60, 0.1);
+    color: #E74C3C;
+    border-color: rgba(231, 76, 60, 0.3);
+  }
+  
+  .sell-btn.active {
+    background: #E74C3C;
+    color: #fff;
+    border-color: #E74C3C;
+  }
+  
+  .trade-type-btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+  }
+  
+  /* Gentelella specific styling */
+  .pricing {
+    margin-bottom: 20px;
+    text-align: center;
+  }
+  
+  .pricing .title {
+    background: #2A3F54;
+    padding: 15px;
+    border-radius: 5px 5px 0 0;
+  }
+  
+  .pricing .title h2 {
+    margin: 0;
+    font-size: 16px;
+    color: #73879C;
+  }
+  
+  .pricing .title h1 {
+    margin: 10px 0;
+    font-size: 24px;
+    font-weight: bold;
+  }
+  
+  .green {
+    color: #1ABB9C !important;
+  }
+  
+  .red {
+    color: #E74C3C !important;
+  }
+</style>
+{% endblock %}

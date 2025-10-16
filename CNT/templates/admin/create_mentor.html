@@ -1,0 +1,53 @@
+{% extends "admin/admin_base.html" %}
+
+{% block title %}Create Mentor - Admin Panel{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-12">
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <h2><i class="fas fa-user-plus me-2"></i>Create Mentor</h2>
+            <a href="{{ url_for('admin.mentors') }}" class="btn btn-secondary">
+                <i class="fas fa-arrow-left me-2"></i>Back to Mentors
+            </a>
+        </div>
+    </div>
+</div>
+
+<div class="row justify-content-center">
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-body">
+                <form method="POST">
+                    <div class="mb-3">
+                        <label for="name" class="form-label">
+                            <i class="fas fa-user me-2"></i>Mentor Name
+                        </label>
+                        <input type="text" class="form-control" id="name" name="name" 
+                               placeholder="Enter mentor's full name" required>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="email" class="form-label">
+                            <i class="fas fa-envelope me-2"></i>Email Address
+                        </label>
+                        <input type="email" class="form-control" id="email" name="email" 
+                               placeholder="Enter mentor's email" required>
+                    </div>
+
+                    <div class="alert alert-info">
+                        <i class="fas fa-info-circle me-2"></i>
+                        <strong>Note:</strong> Mentor ID and password will be automatically generated and shown once after creation.
+                    </div>
+
+                    <div class="d-grid">
+                        <button type="submit" class="btn btn-primary">
+                            <i class="fas fa-plus me-2"></i>Create Mentor
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

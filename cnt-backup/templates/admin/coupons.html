@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>All Coupons</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
+        .nav { margin-bottom: 20px; }
+        .nav a { margin-right: 15px; text-decoration: none; color: #007bff; }
+        .flash { background: #d4edda; color: #155724; padding: 10px; border-radius: 5px; margin-bottom: 15px; }
+        table { width: 100%; border-collapse: collapse; background: white; }
+        th, td { padding: 12px; text-align: left; border-bottom: 1px solid #ddd; }
+        th { background: #f8f9fa; font-weight: bold; }
+        .active { color: green; font-weight: bold; }
+        .inactive { color: red; }
+        .toggle-btn { padding: 5px 10px; border: none; border-radius: 3px; cursor: pointer; font-size: 12px; }
+        .activate { background: #28a745; color: white; }
+        .deactivate { background: #dc3545; color: white; }
+        .toggle-btn:hover { opacity: 0.8; }
+        .search-box { margin-bottom: 15px; }
+        .search-box input { padding: 8px; width: 300px; border: 1px solid #ddd; border-radius: 3px; }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>All Coupons</h1>
+        <div>
+            {{ session.admin_username }} ({{ session.admin_role }}) | 
+            <a href="{{ url_for('admin.logout') }}">Logout</a>
+        </div>
+    </div>
+
+    {% with messages = get_flashed_messages() %}
+        {% if messages %}
+            {% for message in messages %}
+                <div class="flash">{{ message }}</div>
+            {% endfor %}
+        {% endif %}
+    {% endwith %}
+
+    <div class="nav">
+        <a href="{{ url_for('admin.dashboard') }}">Dashboard</a>
+        {% if session.admin_role == 'owner' %}
+            <a href="{{ url_for('admin.create_coupon') }}">Create Coupon</a>
+            <a href="{{ url_for('admin.create_user') }}">Create Admin User</a>
+        {% endif %}
+    </div>
+
+    <div class="search-box">
+        <input type="text" id="searchInput" placeholder="Search coupons..." onkeyup="searchCoupons()">
+    </div>
+
+    <table id="couponsTable">
+        <thead>
+            <tr>
+                <th>Code</th>
+                <th>Discount %</th>
+                <th>Status</th>
+                <th>Created By</th>
+                <th>Created Date</th>
+                <th>Actions</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for coupon in coupons %}
+            <tr>
+                <td><strong>{{ coupon.code }}</strong></td>
+                <td>{{ coupon.discount_percent }}%</td>
+                <td>
+                    <span class="{{ 'active' if coupon.active else 'inactive' }}">
+                        {{ 'Active' if coupon.active else 'Inactive' }}
+                    </span>
+                </td>
+                <td>{{ coupon.created_by }}</td>
+                <td>{{ coupon.created_at.strftime('%Y-%m-%d %H:%M') }}</td>
+                <td>
+                    <form method="POST" action="{{ url_for('admin.toggle_coupon', coupon_id=coupon.id) }}" style="display: inline;">
+                        <button type="submit" class="toggle-btn {{ 'deactivate' if coupon.active else 'activate' }}">
+                            {{ 'Deactivate' if coupon.active else 'Activate' }}
+                        </button>
+                    </form>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+
+    {% if not coupons %}
+    <p style="text-align: center; color: #666; margin-top: 50px;">No coupons found.</p>
+    {% endif %}
+
+    <script>
+        function searchCoupons() {
+            const input = document.getElementById('searchInput');
+            const filter = input.value.toLowerCase();
+            const table = document.getElementById('couponsTable');
+            const rows = table.getElementsByTagName('tr');
+
+            for (let i = 1; i < rows.length; i++) {
+                const cells = rows[i].getElementsByTagName('td');
+                let found = false;
+                
+                for (let j = 0; j < cells.length - 1; j++) {
+                    if (cells[j].textContent.toLowerCase().includes(filter)) {
+                        found = true;
+                        break;
+                    }
+                }
+                
+                rows[i].style.display = found ? '' : 'none';
+            }
+        }
+    </script>
+</body>
+</html>

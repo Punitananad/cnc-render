@@ -1,0 +1,1313 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Trading Journal - Trades</title>
+    
+    <!-- Bootstrap 5 CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- DataTables -->
+    <link rel="stylesheet" href="https://cdn.datatables.net/1.13.6/css/dataTables.bootstrap5.min.css">
+    <link rel="stylesheet" href="https://cdn.datatables.net/buttons/2.4.2/css/buttons.bootstrap5.min.css">
+    <link rel="stylesheet" href="https://cdn.datatables.net/responsive/2.5.0/css/responsive.bootstrap5.min.css">
+    <!-- Custom CSS -->
+    <style>
+        :root {
+            --primary-color: #2c3e50;
+            --secondary-color: #3498db;
+            --success-color: #27ae60;
+            --danger-color: #e74c3c;
+            --warning-color: #f39c12;
+            --light-bg: #f8f9fa;
+            --dark-bg: #343a40;
+        }
+        
+        body {
+            background-color: #f5f7fa;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+        
+        .navbar-brand {
+            font-weight: 700;
+        }
+        
+        .card {
+            border-radius: 10px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            border: none;
+            margin-bottom: 20px;
+        }
+        
+        .card-header {
+            background-color: white;
+            border-bottom: 1px solid #eaeaea;
+            font-weight: 600;
+            padding: 15px 20px;
+        }
+        
+        .table th {
+            font-weight: 600;
+            border-top: none;
+        }
+        
+        .profit {
+            color: var(--success-color);
+            font-weight: 600;
+        }
+        
+        .loss {
+            color: var(--danger-color);
+            font-weight: 600;
+        }
+        
+        .win-badge {
+            background-color: var(--success-color);
+        }
+        
+        .loss-badge {
+            background-color: var(--danger-color);
+        }
+        
+        .breakeven-badge {
+            background-color: var(--warning-color);
+        }
+        
+        .broker-connected {
+            color: var(--success-color);
+        }
+        
+        .broker-disconnected {
+            color: var(--danger-color);
+        }
+        
+        .broker-status {
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+        }
+        
+        .action-buttons .btn {
+            margin-right: 5px;
+        }
+        
+        .page-title {
+            color: var(--primary-color);
+            margin-bottom: 20px;
+            font-weight: 700;
+        }
+        
+        .filter-section {
+            background-color: white;
+            border-radius: 10px;
+            padding: 15px;
+            margin-bottom: 20px;
+        }
+        
+        .stats-card {
+            text-align: center;
+            padding: 15px;
+        }
+        
+        .stats-value {
+            font-size: 1.8rem;
+            font-weight: 700;
+            margin: 10px 0;
+        }
+        
+        .stats-label {
+            font-size: 0.9rem;
+            color: #6c757d;
+        }
+        
+        .import-section {
+            background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+            border-left: 4px solid var(--secondary-color);
+        }
+        
+        .broker-section {
+            background: linear-gradient(135deg, #f0f8ff 0%, #e6f3ff 100%);
+            border-left: 4px solid var(--secondary-color);
+        }
+        
+        .bulk-actions {
+            background-color: #f8f9fa;
+            padding: 10px;
+            border-radius: 5px;
+            border: 1px solid #dee2e6;
+        }
+        
+        .notification {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            z-index: 9999;
+            min-width: 300px;
+        }
+        
+        .table-responsive {
+            border-radius: 10px;
+        }
+        
+        .dt-buttons {
+            margin-bottom: 15px;
+        }
+        
+        .dt-button {
+            margin-right: 5px !important;
+        }
+        
+        .dataTables_filter {
+            margin-bottom: 15px;
+        }
+        
+        .advanced-search {
+            background-color: #f8f9fa;
+            border-radius: 10px;
+            padding: 15px;
+            margin-bottom: 20px;
+        }
+        
+        .trade-analytics {
+            background: linear-gradient(135deg, #e8f5e8 0%, #f0f8f0 100%);
+            border-left: 4px solid var(--success-color);
+        }
+        
+        .performance-metrics {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin-top: 15px;
+        }
+        
+        .metric-card {
+            background: white;
+            padding: 15px;
+            border-radius: 8px;
+            text-align: center;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        
+        .metric-value {
+            font-size: 1.5rem;
+            font-weight: bold;
+            margin: 5px 0;
+        }
+        
+        .metric-label {
+            font-size: 0.9rem;
+            color: #6c757d;
+        }
+    </style>
+</head>
+<body>
+    <!-- Fixed: Use consistent top navigation bar instead of full navbar -->
+    <div class="top-nav" style="background: #2c3e50; color: white; padding: 15px 20px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
+        <div class="nav toggle" style="float: left;">
+            <a id="menu_toggle" class="menu_toggle" style="color: white; font-size: 18px; text-decoration: none;">
+                <i class="fas fa-bars"></i>
+            </a>
+        </div>
+        <div style="float: left; margin-left: 20px;">
+            <h3 style="margin: 0; color: white; font-size: 18px;">
+                <i class="fas fa-exchange-alt me-2"></i>Trade History
+            </h3>
+        </div>
+        <div style="float: right;">
+            <a href="{{ url_for('calculatentrade.trade_form') }}" class="btn btn-primary btn-sm">
+                <i class="fas fa-plus me-1"></i>Add New Trade
+            </a>
+        </div>
+        <div style="clear: both;"></div>
+    </div>
+
+    <div class="container mt-4">
+        <!-- Fixed: Simplified page header since we moved controls to top nav -->
+        <div class="mb-4">
+            <!-- Page header content moved to top nav -->
+        </div>
+
+        <!-- Stats Cards -->
+        <div class="row mb-4">
+            <div class="col-md-3">
+                <div class="card stats-card">
+                    <div class="stats-value text-primary">{{ "{:,.2f}".format(total_pnl) if total_pnl else "0.00" }}</div>
+                    <div class="stats-label">Total P&L</div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card stats-card">
+                    <div class="stats-value text-success">{{ total_trades }}</div>
+                    <div class="stats-label">Total Trades</div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card stats-card">
+                    <div class="stats-value text-info">{{ "{:.1f}%".format(win_rate) if win_rate else "0%" }}</div>
+                    <div class="stats-label">Win Rate</div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card stats-card">
+                    <div class="stats-value text-warning">{{ winning_trades }}/{{ losing_trades }}</div>
+                    <div class="stats-label">Wins/Losses</div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Advanced Analytics Section -->
+        <div class="card trade-analytics mb-4">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h5 class="mb-0">
+                    <i class="fas fa-chart-line me-2"></i>Advanced Analytics
+                </h5>
+                <button class="btn btn-sm btn-outline-primary" id="refresh-analytics">
+                    <i class="fas fa-sync me-1"></i>Refresh
+                </button>
+            </div>
+            <div class="card-body">
+                <div class="performance-metrics">
+                    <div class="metric-card">
+                        <div class="metric-value text-success" id="avg-win">0.00</div>
+                        <div class="metric-label">Avg Win</div>
+                    </div>
+                    <div class="metric-card">
+                        <div class="metric-value text-danger" id="avg-loss">0.00</div>
+                        <div class="metric-label">Avg Loss</div>
+                    </div>
+                    <div class="metric-card">
+                        <div class="metric-value text-info" id="profit-factor">0.00</div>
+                        <div class="metric-label">Profit Factor</div>
+                    </div>
+                    <div class="metric-card">
+                        <div class="metric-value text-warning" id="max-drawdown">0.00</div>
+                        <div class="metric-label">Max Drawdown</div>
+                    </div>
+                    <div class="metric-card">
+                        <div class="metric-value text-primary" id="sharpe-ratio">0.00</div>
+                        <div class="metric-label">Sharpe Ratio</div>
+                    </div>
+                    <div class="metric-card">
+                        <div class="metric-value text-secondary" id="total-volume">0</div>
+                        <div class="metric-label">Total Volume</div>
+                    </div>
+                </div>
+                
+                <!-- Quick Insights -->
+                <div class="row mt-3">
+                    <div class="col-md-6">
+                        <h6>Best Performing Symbol</h6>
+                        <div id="best-symbol" class="badge bg-success">-</div>
+                    </div>
+                    <div class="col-md-6">
+                        <h6>Most Traded Symbol</h6>
+                        <div id="most-traded" class="badge bg-info">-</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Broker Data Section -->
+        <div class="card broker-section mb-4">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h5 class="mb-0">
+                    <i class="fas fa-database me-2"></i>Broker Data
+                </h5>
+                <a href="{{ url_for('calculatentrade.connect_broker') }}" class="btn btn-sm btn-outline-primary">
+                    <i class="fas fa-cog me-1"></i>Manage Connections
+                </a>
+            </div>
+            <div class="card-body">
+                <div class="row mb-3">
+                    <div class="col-md-3">
+                        <label class="form-label">Select Broker</label>
+                        <select id="broker-select" class="form-select">
+                            <option value="kite">Kite (Zerodha)</option>
+                            <option value="dhan">Dhan</option>
+                            <option value="angel">Angel One</option>
+                        </select>
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label">User ID</label>
+                        <input type="text" id="broker-user-id" class="form-control" placeholder="Enter User ID" value="NES881">
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label">Data Type</label>
+                        <select id="data-type-select" class="form-select">
+                            <option value="trades">Trades</option>
+                            <option value="orders">Orders</option>
+                            <option value="positions">Positions</option>
+                            <option value="portfolio">Portfolio</option>
+                        </select>
+                    </div>
+                    <div class="col-md-3 d-flex align-items-end">
+                        <button id="fetch-broker-data" class="btn btn-primary w-100">
+                            <i class="fas fa-download me-1"></i>Fetch Data
+                        </button>
+                    </div>
+                </div>
+                
+                <!-- Real-time Output Display -->
+                <div id="realtime-output" class="mt-3">
+                    <h6>Real-time Output</h6>
+                    <div id="output-log" class="border rounded p-3" style="height: 200px; overflow-y: auto; background-color: #000; color: #00ff00; font-family: monospace; font-size: 12px;">
+                        <div>System ready...</div>
+                    </div>
+                </div>
+                
+                <!-- Broker Data Display -->
+                <div id="broker-data-display" class="mt-3" style="display: none;">
+                    <div class="d-flex justify-content-between align-items-center mb-2">
+                        <h6 class="mb-0">Fetched Data</h6>
+                        <div>
+                            <button id="import-to-trades" class="btn btn-sm btn-success me-2" style="display: none;">
+                                <i class="fas fa-plus me-1"></i>Import to Trades
+                            </button>
+                            <button id="refresh-data" class="btn btn-sm btn-outline-secondary">
+                                <i class="fas fa-sync me-1"></i>Refresh
+                            </button>
+                        </div>
+                    </div>
+                    <div id="broker-data-content" class="border rounded p-3" style="max-height: 400px; overflow-y: auto; background-color: #f8f9fa;">
+                        <!-- Data will be displayed here -->
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Filters and Search -->
+        <div class="card filter-section">
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-3">
+                        <label class="form-label">Filter by Result</label>
+                        <select id="filter-result" class="form-select">
+                            <option value="all">All Trades</option>
+                            <option value="win">Winning Trades</option>
+                            <option value="loss">Losing Trades</option>
+                            <option value="breakeven">Breakeven Trades</option>
+                        </select>
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label">Filter by Strategy</label>
+                        <select id="filter-strategy" class="form-select">
+                            <option value="all">All Strategies</option>
+                            {% for strategy in strategies %}
+                            <option value="{{ strategy.id }}">{{ strategy.name }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label">Date Range</label>
+                        <input type="date" id="filter-date" class="form-control">
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label">Search</label>
+                        <input type="text" id="search-trades" class="form-control" placeholder="Search symbols...">
+                    </div>
+                </div>
+                <div class="row mt-3">
+                    <div class="col-md-12 d-flex justify-content-between">
+                        <div>
+                            <button id="apply-filters" class="btn btn-primary">
+                                <i class="fas fa-filter me-1"></i>Apply Filters
+                            </button>
+                            <button id="reset-filters" class="btn btn-outline-secondary ms-2">
+                                <i class="fas fa-redo me-1"></i>Reset
+                            </button>
+                        </div>
+                        <div>
+                            <button id="export-csv" class="btn btn-outline-success">
+                                <i class="fas fa-file-csv me-1"></i>Export CSV
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Trades Table -->
+        <div class="card">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h5 class="mb-0">Trade History</h5>
+                <div class="form-check form-switch">
+                    <input class="form-check-input" type="checkbox" id="auto-refresh">
+                    <label class="form-check-label" for="auto-refresh">Auto Refresh</label>
+                </div>
+            </div>
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table id="trades-table" class="table table-hover">
+                        <thead>
+                            <tr>
+                                <th>Date</th>
+                                <th>Symbol</th>
+                                <th>Type</th>
+                                <th>Entry</th>
+                                <th>Exit</th>
+                                <th>Quantity</th>
+                                <th>P&L</th>
+                                <th>Result</th>
+                                <th>Strategy</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for trade in trades %}
+                            <tr>
+                                <td>{{ trade.date.strftime('%Y-%m-%d') }}</td>
+                                <td><strong>{{ trade.symbol }}</strong></td>
+                                <td>
+                                    {% if trade.trade_type == 'long' %}
+                                    <span class="badge bg-success">Long</span>
+                                    {% else %}
+                                    <span class="badge bg-danger">Short</span>
+                                    {% endif %}
+                                </td>
+                                <td>{{ "%.2f"|format(trade.entry_price) }}</td>
+                                <td>{{ "%.2f"|format(trade.exit_price) }}</td>
+                                <td>{{ trade.quantity }}</td>
+                                <td class="{{ 'profit' if trade.pnl > 0 else 'loss' if trade.pnl < 0 else '' }}">
+                                    {{ "%.2f"|format(trade.pnl) }}
+                                </td>
+                                <td>
+                                    {% if trade.result == 'win' %}
+                                    <span class="badge win-badge">Win</span>
+                                    {% elif trade.result == 'loss' %}
+                                    <span class="badge loss-badge">Loss</span>
+                                    {% else %}
+                                    <span class="badge breakeven-badge">Breakeven</span>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    {% if trade.strategy %}
+                                    <span class="badge bg-info">{{ trade.strategy.name }}</span>
+                                    {% else %}
+                                    <span class="text-muted">-</span>
+                                    {% endif %}
+                                </td>
+                                <td class="action-buttons">
+                                    <div class="btn-group" role="group">
+                                        <a href="{{ url_for('calculatentrade.edit_trade_form', trade_id=trade.id) }}" 
+                                           class="btn btn-sm btn-outline-primary" title="Edit">
+                                            <i class="fas fa-edit"></i>
+                                        </a>
+                                        <button class="btn btn-sm btn-outline-danger delete-trade" 
+                                                data-id="{{ trade.id }}" title="Delete">
+                                            <i class="fas fa-trash"></i>
+                                        </button>
+                                        <button class="btn btn-sm btn-outline-info view-trade" 
+                                                data-id="{{ trade.id }}" title="View Details">
+                                            <i class="fas fa-eye"></i>
+                                        </button>
+                                        <button class="btn btn-sm btn-outline-secondary duplicate-trade" 
+                                                data-id="{{ trade.id }}" title="Duplicate Trade">
+                                            <i class="fas fa-copy"></i>
+                                        </button>
+                                    </div>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Trade Details Modal -->
+    <div class="modal fade" id="tradeDetailsModal" tabindex="-1">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Trade Details</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body" id="trade-details-content">
+                    <!-- Details will be loaded here via AJAX -->
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Import Progress Modal -->
+    <div class="modal fade" id="importProgressModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Importing Trades</h5>
+                </div>
+                <div class="modal-body">
+                    <div class="progress mb-3">
+                        <div id="import-progress-bar" class="progress-bar" role="progressbar" style="width: 0%"></div>
+                    </div>
+                    <p id="import-status" class="text-center">Starting import...</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- JavaScript Libraries -->
+    <script src="https://code.jquery.com/jquery-3.7.0.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://cdn.datatables.net/1.13.6/js/jquery.dataTables.min.js"></script>
+    <script src="https://cdn.datatables.net/1.13.6/js/dataTables.bootstrap5.min.js"></script>
+    <script src="https://cdn.datatables.net/buttons/2.4.2/js/dataTables.buttons.min.js"></script>
+    <script src="https://cdn.datatables.net/buttons/2.4.2/js/buttons.bootstrap5.min.js"></script>
+    <script src="https://cdn.datatables.net/buttons/2.4.2/js/buttons.html5.min.js"></script>
+    <script src="https://cdn.datatables.net/buttons/2.4.2/js/buttons.print.min.js"></script>
+    <script src="https://cdn.datatables.net/responsive/2.5.0/js/dataTables.responsive.min.js"></script>
+    <script src="https://cdn.datatables.net/responsive/2.5.0/js/responsive.bootstrap5.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.1.53/pdfmake.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.1.53/vfs_fonts.js"></script>
+
+    <script>
+        // Server-provided user ID - CRITICAL: Must be injected from Flask session
+        const CURRENT_USER_ID = "{{ session.get('user_id', '') }}";
+        
+        // Debug logging for diagnostics
+        console.log('CURRENT_USER_ID:', CURRENT_USER_ID);
+        console.log('localStorage broker_token:', localStorage.getItem('broker_token'));
+        
+        $(document).ready(function() {
+            // Initialize DataTable with advanced features
+            const table = $('#trades-table').DataTable({
+                pageLength: 25,
+                order: [[0, 'desc']],
+                responsive: true,
+                stateSave: false,
+                dom: '<"row"<"col-sm-12 col-md-6"l><"col-sm-12 col-md-6"f>>rtip',
+                columnDefs: [
+                    { targets: [6], className: 'text-end' },
+                    { targets: [9], orderable: false }
+                ],
+                language: {
+                    search: "Search:",
+                    lengthMenu: "Show _MENU_ entries",
+                    info: "Showing _START_ to _END_ of _TOTAL_ entries",
+                    paginate: {
+                        first: "First",
+                        last: "Last",
+                        next: "Next",
+                        previous: "Previous"
+                    }
+                }
+            });
+
+            // Broker data fetching
+            $('#fetch-broker-data').on('click', function() {
+                const broker = $('#broker-select').val();
+                const userId = $('#broker-user-id').val().trim() || CURRENT_USER_ID;
+                const dataType = $('#data-type-select').val();
+                
+                console.log('Fetch clicked:', { broker, userId, dataType });
+                
+                if (!userId) {
+                    showNotification('Please enter a User ID or ensure you are logged in', 'warning');
+                    return;
+                }
+                
+                fetchBrokerDataDisplay(broker, userId, dataType);
+            });
+            
+            $('#refresh-data').on('click', function() {
+                const broker = $('#broker-select').val();
+                const userId = $('#broker-user-id').val().trim() || CURRENT_USER_ID;
+                const dataType = $('#data-type-select').val();
+                fetchBrokerDataDisplay(broker, userId, dataType);
+            });
+            
+            $('#import-to-trades').on('click', function() {
+                importDisplayedDataToTrades();
+            });
+
+            // Filter functionality
+            $('#apply-filters').on('click', function() {
+                applyFilters();
+            });
+
+            $('#reset-filters').on('click', function() {
+                $('#filter-result').val('all');
+                $('#filter-strategy').val('all');
+                $('#filter-date').val('');
+                $('#search-trades').val('');
+                applyFilters();
+            });
+
+            // Export CSV
+            $('#export-csv').on('click', function() {
+                exportToCSV();
+            });
+
+            // Delete trade with improved event delegation
+            $(document).on('click', '.delete-trade', function(e) {
+                e.preventDefault();
+                const tradeId = $(this).data('id');
+                const $btn = $(this);
+                
+                if (confirm('Are you sure you want to delete this trade? This action cannot be undone.')) {
+                    $btn.prop('disabled', true).html('<i class="fas fa-spinner fa-spin"></i>');
+                    deleteTrade(tradeId, $btn);
+                }
+            });
+
+            // View trade details with improved event delegation
+            $(document).on('click', '.view-trade', function(e) {
+                e.preventDefault();
+                const tradeId = $(this).data('id');
+                const $btn = $(this);
+                $btn.prop('disabled', true).html('<i class="fas fa-spinner fa-spin"></i>');
+                
+                viewTradeDetails(tradeId, function() {
+                    $btn.prop('disabled', false).html('<i class="fas fa-eye"></i>');
+                });
+            });
+
+            // Auto-refresh
+            $('#auto-refresh').on('change', function() {
+                if ($(this).is(':checked')) {
+                    startAutoRefresh();
+                } else {
+                    stopAutoRefresh();
+                }
+            });
+
+            // Add real-time logging function
+            function logOutput(message, type = 'info') {
+                const timestamp = new Date().toLocaleTimeString();
+                const color = {
+                    'info': '#00ff00',
+                    'error': '#ff0000',
+                    'warning': '#ffff00',
+                    'success': '#00ffff'
+                }[type] || '#00ff00';
+                
+                const logEntry = `<div style="color: ${color}">[${timestamp}] ${message}</div>`;
+                $('#output-log').append(logEntry);
+                $('#output-log').scrollTop($('#output-log')[0].scrollHeight);
+            }
+            
+            // ROBUST FETCH FUNCTION - EXACT IMPLEMENTATION AS REQUESTED
+            function fetchBrokerDataDisplay(broker, userId, dataType) {
+                const $btn = $('#fetch-broker-data');
+                const $display = $('#broker-data-display');
+                const $content = $('#broker-data-content');
+
+                logOutput(`Starting ${dataType} fetch for ${broker} user ${userId}`, 'info');
+                $btn.prop('disabled', true).html('<i class="fas fa-spinner fa-spin me-1"></i>Fetching...');
+                $content.html('<div class="text-center"><i class="fas fa-spinner fa-spin"></i> Loading data...</div>');
+                $display.show();
+
+                if (!userId) {
+                    logOutput('ERROR: No userId provided', 'error');
+                    showNotification('Missing user id. Re-login or provide user id.', 'warning');
+                    $btn.prop('disabled', false).html('<i class="fas fa-download me-1"></i>Fetch Data');
+                    return;
+                }
+
+                // First simulate a connection to get a token
+                logOutput('Establishing broker connection...', 'info');
+                $.ajax({
+                    url: '/calculatentrade_journal/api/broker/connect',
+                    method: 'POST',
+                    contentType: 'application/json',
+                    data: JSON.stringify({
+                        broker: broker,
+                        user_id: userId,
+                        connected: true
+                    }),
+                    xhrFields: { withCredentials: true }
+                }).done(function(connectResponse) {
+                    logOutput(`Connection established. Token: ${connectResponse.token ? 'YES' : 'NO'}`, 'success');
+                    
+                    // Now fetch the data with the token
+                    const url = dataType === 'portfolio'
+                        ? `/calculatentrade_journal/api/portfolio?broker=${broker}&user_id=${encodeURIComponent(userId)}`
+                        : `/calculatentrade_journal/api/broker/${dataType}?broker=${broker}&user_id=${encodeURIComponent(userId)}`;
+
+                    logOutput(`Fetching data from: ${url}`, 'info');
+
+                    $.ajax({
+                        url,
+                        method: 'GET',
+                        dataType: 'json',
+                        timeout: 15000,
+                        xhrFields: { withCredentials: true },
+                        beforeSend: function(xhr) {
+                            if (connectResponse.token) {
+                                xhr.setRequestHeader('Authorization', 'Bearer ' + connectResponse.token);
+                                logOutput('Authorization header added', 'info');
+                            }
+                        }
+                    }).done(function(response, textStatus, jqXHR) {
+                        logOutput(`API Response (${jqXHR.status}): ${JSON.stringify(response)}`, 'success');
+                        $btn.prop('disabled', false).html('<i class="fas fa-download me-1"></i>Fetch Data');
+
+                        if (response && (response.ok || response.data)) {
+                            const data = response.data || response;
+                            logOutput(`Data received: ${Array.isArray(data) ? data.length : 'object'} items`, 'success');
+                            displayBrokerData(data, dataType);
+                            if (dataType === 'trades') {
+                                $('#import-to-trades').show();
+                                window.currentBrokerData = data;
+                            } else {
+                                $('#import-to-trades').hide();
+                            }
+                        } else {
+                            logOutput(`No data in response: ${JSON.stringify(response)}`, 'warning');
+                            $content.html(`<div class="text-warning">No ${dataType} data available</div>`);
+                        }
+                    }).fail(function(jqXHR, textStatus, errorThrown) {
+                        logOutput(`API Error (${jqXHR.status}): ${jqXHR.responseText}`, 'error');
+                        $btn.prop('disabled', false).html('<i class="fas fa-download me-1"></i>Fetch Data');
+
+                        let errorMsg = 'Error fetching data';
+                        if (jqXHR.status === 401) {
+                            errorMsg = 'Not connected to broker. Please connect first (401).';
+                        } else if (jqXHR.status === 403) {
+                            errorMsg = 'Access denied (403).';
+                        } else if (jqXHR.status === 0) {
+                            errorMsg = 'Network error or CORS blocked the request.';
+                        } else {
+                            try {
+                                const body = JSON.parse(jqXHR.responseText || '{}');
+                                if (body && body.message) errorMsg = body.message;
+                            } catch (e) { /* ignore */ }
+                        }
+                        $content.html(`<div class="text-danger">${errorMsg}</div>`);
+                        showNotification(errorMsg, 'error');
+                    });
+                }).fail(function(jqXHR) {
+                    logOutput(`Connection failed: ${jqXHR.responseText}`, 'error');
+                    $btn.prop('disabled', false).html('<i class="fas fa-download me-1"></i>Fetch Data');
+                    $content.html('<div class="text-danger">Failed to establish broker connection</div>');
+                    showNotification('Failed to connect to broker', 'error');
+                });
+                
+                // Add timeout to reset button if it gets stuck
+                setTimeout(function() {
+                    if ($btn.prop('disabled')) {
+                        $btn.prop('disabled', false).html('<i class="fas fa-download me-1"></i>Fetch Data');
+                        logOutput('Request timeout - button reset', 'warning');
+                    }
+                }, 30000); // 30 second timeout
+            }
+            
+            function displayBrokerData(data, dataType) {
+                const $content = $('#broker-data-content');
+                
+                if (!data || data.length === 0) {
+                    $content.html(`<div class="text-muted">No ${dataType} data found</div>`);
+                    return;
+                }
+                
+                let html = `<div class="alert alert-success mb-3">Successfully loaded ${data.length} ${dataType} items</div>`;
+                
+                if (dataType === 'orders') {
+                    html += '<div class="table-responsive"><table class="table table-sm table-striped">';
+                    html += '<thead><tr><th>Order ID</th><th>Symbol</th><th>Side</th><th>Qty</th><th>Price</th><th>Status</th><th>Time</th></tr></thead><tbody>';
+                    
+                    data.forEach(order => {
+                        html += `<tr>
+                            <td>${order.order_id || 'N/A'}</td>
+                            <td><strong>${order.symbol || 'N/A'}</strong></td>
+                            <td><span class="badge ${order.side === 'BUY' ? 'bg-success' : 'bg-danger'}">${order.side || 'N/A'}</span></td>
+                            <td>${order.quantity || 0}</td>
+                            <td>₹${order.price || 0}</td>
+                            <td><span class="badge bg-info">${order.status || 'N/A'}</span></td>
+                            <td>${order.timestamp || 'N/A'}</td>
+                        </tr>`;
+                    });
+                    
+                    html += '</tbody></table></div>';
+                } else if (dataType === 'trades') {
+                    html += '<div class="table-responsive"><table class="table table-sm table-striped">';
+                    html += '<thead><tr><th>Trade ID</th><th>Symbol</th><th>Side</th><th>Qty</th><th>Price</th><th>Time</th></tr></thead><tbody>';
+                    
+                    data.forEach(trade => {
+                        html += `<tr>
+                            <td>${trade.trade_id || 'N/A'}</td>
+                            <td><strong>${trade.symbol || 'N/A'}</strong></td>
+                            <td><span class="badge ${trade.side === 'BUY' ? 'bg-success' : 'bg-danger'}">${trade.side || 'N/A'}</span></td>
+                            <td>${trade.quantity || 0}</td>
+                            <td>₹${trade.price || 0}</td>
+                            <td>${trade.timestamp || 'N/A'}</td>
+                        </tr>`;
+                    });
+                    
+                    html += '</tbody></table></div>';
+                } else if (dataType === 'positions') {
+                    html += '<div class="table-responsive"><table class="table table-sm table-striped">';
+                    html += '<thead><tr><th>Symbol</th><th>Qty</th><th>Avg Price</th><th>Current Price</th><th>P&L</th><th>Side</th></tr></thead><tbody>';
+                    
+                    data.forEach(pos => {
+                        const pnlClass = pos.pnl > 0 ? 'text-success' : pos.pnl < 0 ? 'text-danger' : '';
+                        html += `<tr>
+                            <td><strong>${pos.symbol || 'N/A'}</strong></td>
+                            <td>${pos.quantity || 0}</td>
+                            <td>₹${pos.average_price || 0}</td>
+                            <td>₹${pos.current_price || 0}</td>
+                            <td class="${pnlClass}">₹${pos.pnl || 0}</td>
+                            <td><span class="badge ${pos.side === 'LONG' ? 'bg-success' : 'bg-danger'}">${pos.side || 'N/A'}</span></td>
+                        </tr>`;
+                    });
+                    
+                    html += '</tbody></table></div>';
+                } else {
+                    html += '<pre class="bg-light p-3 rounded" style="font-size: 12px;">';
+                    html += JSON.stringify(data.slice(0, 5), null, 2);
+                    html += '</pre>';
+                }
+                
+                $content.html(html);
+            }
+            
+            function importDisplayedDataToTrades() {
+                if (!window.currentBrokerData || window.currentBrokerData.length === 0) {
+                    showNotification('No trade data to import', 'warning');
+                    return;
+                }
+                
+                const broker = $('#broker-select').val();
+                let importedCount = 0;
+                const totalCount = window.currentBrokerData.length;
+                
+                showNotification(`Importing ${totalCount} trades...`, 'info');
+                
+                window.currentBrokerData.forEach(trade => {
+                    const formattedTrade = formatTradeForImport(trade, broker, null);
+                    
+                    $.ajax({
+                        url: '/calculatentrade_journal/api/trades/from_broker',
+                        method: 'POST',
+                        contentType: 'application/json',
+                        data: JSON.stringify(formattedTrade),
+                        xhrFields: { withCredentials: true },
+                        beforeSend: function(xhr) {
+                            const token = localStorage.getItem('broker_token');
+                            if (token) xhr.setRequestHeader('Authorization', 'Bearer ' + token);
+                        },
+                        success: function() {
+                            importedCount++;
+                            if (importedCount === totalCount) {
+                                showNotification(`Successfully imported ${importedCount} trades`, 'success');
+                                setTimeout(() => location.reload(), 2000);
+                            }
+                        },
+                        error: function(jqXHR) {
+                            console.error('Import error:', jqXHR.status, jqXHR.responseText);
+                            importedCount++;
+                            if (importedCount === totalCount) {
+                                showNotification('Import completed with some errors', 'warning');
+                                setTimeout(() => location.reload(), 2000);
+                            }
+                        }
+                    });
+                });
+            }
+
+            function formatTradeForImport(trade, broker, strategyId) {
+                let formatted = {
+                    strategy_id: strategyId || null
+                };
+                
+                switch(broker) {
+                    case 'kite':
+                        formatted.symbol = trade.tradingsymbol;
+                        formatted.entry_price = trade.average_price || trade.price;
+                        formatted.exit_price = trade.average_price || trade.price;
+                        formatted.quantity = Math.abs(trade.quantity);
+                        formatted.trade_type = trade.transaction_type === 'BUY' ? 'long' : 'short';
+                        formatted.date = trade.order_timestamp ? trade.order_timestamp.split('T')[0] : new Date().toISOString().split('T')[0];
+                        break;
+                    case 'dhan':
+                        formatted.symbol = trade.symbol;
+                        formatted.entry_price = trade.averagePrice || trade.tradePrice;
+                        formatted.exit_price = trade.averagePrice || trade.tradePrice;
+                        formatted.quantity = Math.abs(trade.quantity);
+                        formatted.trade_type = trade.transactionType === 'BUY' ? 'long' : 'short';
+                        formatted.date = trade.tradeDate || new Date().toISOString().split('T')[0];
+                        break;
+                    case 'angel':
+                        formatted.symbol = trade.tradingsymbol;
+                        formatted.entry_price = trade.averageprice || trade.price;
+                        formatted.exit_price = trade.averageprice || trade.price;
+                        formatted.quantity = Math.abs(trade.quantity);
+                        formatted.trade_type = trade.transactiontype === 'BUY' ? 'long' : 'short';
+                        formatted.date = trade.orderdatetime ? trade.orderdatetime.split(' ')[0] : new Date().toISOString().split('T')[0];
+                        break;
+                }
+                
+                return formatted;
+            }
+
+            function applyFilters() {
+                const resultFilter = $('#filter-result').val();
+                const strategyFilter = $('#filter-strategy').val();
+                const dateFilter = $('#filter-date').val();
+                const searchFilter = $('#search-trades').val();
+                
+                // Build filter URL
+                let url = '/calculatentrade_journal/api/trades?';
+                const params = [];
+                
+                if (resultFilter !== 'all') params.push(`filter=${resultFilter}`);
+                if (strategyFilter !== 'all') params.push(`strategy_id=${strategyFilter}`);
+                if (dateFilter) params.push(`date=${dateFilter}`);
+                if (searchFilter) params.push(`search=${encodeURIComponent(searchFilter)}`);
+                
+                url += params.join('&');
+                
+                // Fetch filtered data
+                $.ajax({
+                    url,
+                    method: 'GET',
+                    xhrFields: { withCredentials: true },
+                    beforeSend: function(xhr) {
+                        const token = localStorage.getItem('broker_token');
+                        if (token) xhr.setRequestHeader('Authorization', 'Bearer ' + token);
+                    }
+                }).done(function(response) {
+                    // Clear and repopulate table
+                    table.clear();
+                    response.trades.forEach(trade => {
+                        table.row.add([
+                            trade.date,
+                            trade.symbol,
+                            `<span class="badge ${trade.trade_type === 'long' ? 'bg-success' : 'bg-danger'}">${trade.trade_type === 'long' ? 'Long' : 'Short'}</span>`,
+                            trade.entry_price.toFixed(2),
+                            trade.exit_price.toFixed(2),
+                            trade.quantity,
+                            `<span class="${trade.pnl > 0 ? 'profit' : trade.pnl < 0 ? 'loss' : ''}">${trade.pnl.toFixed(2)}</span>`,
+                            `<span class="badge ${trade.result === 'win' ? 'win-badge' : trade.result === 'loss' ? 'loss-badge' : 'breakeven-badge'}">${trade.result}</span>`,
+                            trade.strategy ? `<span class="badge bg-info">${trade.strategy.name}</span>` : '<span class="text-muted">-</span>',
+                            `<div class="action-buttons">
+                                <a href="/calculatentrade_journal/trade_form/${trade.id}" class="btn btn-sm btn-outline-primary" title="Edit">
+                                    <i class="fas fa-edit"></i>
+                                </a>
+                                <button class="btn btn-sm btn-outline-danger delete-trade" data-id="${trade.id}" title="Delete">
+                                    <i class="fas fa-trash"></i>
+                                </button>
+                                <button class="btn btn-sm btn-outline-info view-trade" data-id="${trade.id}" title="View Details">
+                                    <i class="fas fa-eye"></i>
+                                </button>
+                            </div>`
+                        ]);
+                    });
+                    table.draw();
+                }).fail(function(jqXHR) {
+                    console.error('Filter request failed:', jqXHR.status, jqXHR.responseText);
+                    showNotification('Failed to apply filters', 'error');
+                });
+            }
+
+            function exportToCSV() {
+                // Get all data (not just current page)
+                const data = table.rows().data().toArray();
+                
+                // Create CSV content
+                let csvContent = "Date,Symbol,Type,Entry Price,Exit Price,Quantity,P&L,Result,Strategy\n";
+                
+                data.forEach(row => {
+                    const date = row[0];
+                    const symbol = row[1];
+                    const type = row[2].includes('Long') ? 'Long' : 'Short';
+                    const entryPrice = row[3];
+                    const exitPrice = row[4];
+                    const quantity = row[5];
+                    const pnl = row[6].replace('<span class="profit">', '').replace('<span class="loss">', '').replace('</span>', '');
+                    const result = row[7].includes('Win') ? 'Win' : (row[7].includes('Loss') ? 'Loss' : 'Breakeven');
+                    const strategy = row[8].includes('badge') ? row[8].match(/>(.*?)</)[1] : '';
+                    
+                    csvContent += `"${date}","${symbol}","${type}",${entryPrice},${exitPrice},${quantity},${pnl},"${result}","${strategy}"\n`;
+                });
+                
+                // Create and download file
+                const blob = new Blob([csvContent], { type: 'text/csv' });
+                const url = window.URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.setAttribute('hidden', '');
+                a.setAttribute('href', url);
+                a.setAttribute('download', `trades_${new Date().toISOString().split('T')[0]}.csv`);
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+            }
+
+            function deleteTrade(tradeId, $btn) {
+                $.ajax({
+                    url: `/calculatentrade_journal/api/trades/${tradeId}`,
+                    method: 'DELETE',
+                    timeout: 10000,
+                    xhrFields: { withCredentials: true },
+                    beforeSend: function(xhr) {
+                        const token = localStorage.getItem('broker_token');
+                        if (token) xhr.setRequestHeader('Authorization', 'Bearer ' + token);
+                    },
+                    success: function(response) {
+                        if (response && response.success) {
+                            // Remove row from table instead of full reload
+                            const row = $btn.closest('tr');
+                            table.row(row).remove().draw();
+                            
+                            // Show success message
+                            showNotification('Trade deleted successfully', 'success');
+                            
+                            // Update stats
+                            updateStats();
+                        } else {
+                            showNotification('Failed to delete trade: ' + (response.message || 'Unknown error'), 'error');
+                            $btn.prop('disabled', false).html('<i class="fas fa-trash"></i>');
+                        }
+                    },
+                    error: function(xhr, status, error) {
+                        console.error('Delete trade failed:', xhr.status, xhr.responseText);
+                        let errorMsg = 'Error deleting trade';
+                        if (status === 'timeout') {
+                            errorMsg = 'Request timed out. Please try again.';
+                        } else if (xhr.responseJSON && xhr.responseJSON.message) {
+                            errorMsg = xhr.responseJSON.message;
+                        }
+                        showNotification(errorMsg, 'error');
+                        $btn.prop('disabled', false).html('<i class="fas fa-trash"></i>');
+                    }
+                });
+            }
+
+            function viewTradeDetails(tradeId, callback) {
+                $.ajax({
+                    url: `/calculatentrade_journal/api/trades/${tradeId}`,
+                    method: 'GET',
+                    timeout: 10000,
+                    xhrFields: { withCredentials: true },
+                    beforeSend: function(xhr) {
+                        const token = localStorage.getItem('broker_token');
+                        if (token) xhr.setRequestHeader('Authorization', 'Bearer ' + token);
+                    },
+                    success: function(trade) {
+                    let detailsHtml = `
+                        <div class="row">
+                            <div class="col-md-6">
+                                <h6>Trade Information</h6>
+                                <table class="table table-sm">
+                                    <tr>
+                                        <td><strong>Symbol:</strong></td>
+                                        <td>${trade.symbol}</td>
+                                    </tr>
+                                    <tr>
+                                        <td><strong>Date:</strong></td>
+                                        <td>${trade.date}</td>
+                                    </tr>
+                                    <tr>
+                                        <td><strong>Type:</strong></td>
+                                        <td>${trade.trade_type === 'long' ? 'Long' : 'Short'}</td>
+                                    </tr>
+                                    <tr>
+                                        <td><strong>Quantity:</strong></td>
+                                        <td>${trade.quantity}</td>
+                                    </tr>
+                                </table>
+                            </div>
+                            <div class="col-md-6">
+                                <h6>Price Information</h6>
+                                <table class="table table-sm">
+                                    <tr>
+                                        <td><strong>Entry Price:</strong></td>
+                                        <td>${trade.entry_price.toFixed(2)}</td>
+                                    </tr>
+                                    <tr>
+                                        <td><strong>Exit Price:</strong></td>
+                                        <td>${trade.exit_price.toFixed(2)}</td>
+                                    </tr>
+                                    <tr>
+                                        <td><strong>P&L:</strong></td>
+                                        <td class="${trade.pnl > 0 ? 'profit' : trade.pnl < 0 ? 'loss' : ''}">${trade.pnl.toFixed(2)}</td>
+                                    </tr>
+                                    <tr>
+                                        <td><strong>Result:</strong></td>
+                                        <td>
+                                            <span class="badge ${trade.result === 'win' ? 'win-badge' : trade.result === 'loss' ? 'loss-badge' : 'breakeven-badge'}">
+                                                ${trade.result}
+                                            </span>
+                                        </td>
+                                    </tr>
+                                </table>
+                            </div>
+                        </div>
+                    `;
+                    
+                    if (trade.notes) {
+                        detailsHtml += `
+                            <div class="row mt-3">
+                                <div class="col-12">
+                                    <h6>Notes</h6>
+                                    <p>${trade.notes}</p>
+                                </div>
+                            </div>
+                        `;
+                    }
+                    
+                    if (trade.strategy) {
+                        detailsHtml += `
+                            <div class="row mt-3">
+                                <div class="col-12">
+                                    <h6>Strategy</h6>
+                                    <p><span class="badge bg-info">${trade.strategy.name}</span></p>
+                                </div>
+                            </div>
+                        `;
+                    }
+                    
+                    $('#trade-details-content').html(detailsHtml);
+                    $('#tradeDetailsModal').modal('show');
+                    if (callback) callback();
+                },
+                error: function(xhr, status, error) {
+                    console.error('View trade details failed:', xhr.status, xhr.responseText);
+                    let errorMsg = 'Error loading trade details';
+                    if (status === 'timeout') {
+                        errorMsg = 'Request timed out. Please try again.';
+                    }
+                    showNotification(errorMsg, 'error');
+                    if (callback) callback();
+                }
+            });
+            }
+
+            let autoRefreshInterval;
+            
+            function startAutoRefresh() {
+                autoRefreshInterval = setInterval(function() {
+                    // Refresh table data if needed
+                    if ($('#auto-refresh').is(':checked')) {
+                        applyFilters();
+                    }
+                }, 30000); // Refresh every 30 seconds
+            }
+            
+            function stopAutoRefresh() {
+                if (autoRefreshInterval) {
+                    clearInterval(autoRefreshInterval);
+                }
+            }
+            
+            // Advanced notification system
+            function showNotification(message, type = 'info', duration = 5000) {
+                const alertClass = {
+                    'success': 'alert-success',
+                    'error': 'alert-danger',
+                    'warning': 'alert-warning',
+                    'info': 'alert-info'
+                }[type] || 'alert-info';
+                
+                const notification = $(`
+                    <div class="alert ${alertClass} alert-dismissible fade show position-fixed" 
+                         style="top: 20px; right: 20px; z-index: 9999; min-width: 300px;">
+                        <strong>${type.charAt(0).toUpperCase() + type.slice(1)}:</strong> ${message}
+                        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                    </div>
+                `);
+                
+                $('body').append(notification);
+                
+                if (duration > 0) {
+                    setTimeout(() => {
+                        notification.alert('close');
+                    }, duration);
+                }
+            }
+            
+            // Update stats without page reload
+            function updateStats() {
+                $.ajax({
+                    url: '/calculatentrade_journal/api/stats',
+                    method: 'GET',
+                    xhrFields: { withCredentials: true },
+                    beforeSend: function(xhr) {
+                        const token = localStorage.getItem('broker_token');
+                        if (token) xhr.setRequestHeader('Authorization', 'Bearer ' + token);
+                    }
+                }).done(function(stats) {
+                    $('.stats-value').eq(0).text(stats.total_pnl ? stats.total_pnl.toFixed(2) : '0.00');
+                    $('.stats-value').eq(1).text(stats.total_trades || '0');
+                    $('.stats-value').eq(2).text(stats.win_rate ? stats.win_rate.toFixed(1) + '%' : '0%');
+                    $('.stats-value').eq(3).text((stats.winning_trades || '0') + '/' + (stats.losing_trades || '0'));
+                }).fail(function(jqXHR) {
+                    console.error('Update stats failed:', jqXHR.status, jqXHR.responseText);
+                });
+            }
+            
+            // Initialize advanced features
+            setTimeout(() => {
+                loadAdvancedAnalytics();
+            }, 1000);
+            
+            // Duplicate trade functionality
+            $(document).on('click', '.duplicate-trade', function(e) {
+                e.preventDefault();
+                const tradeId = $(this).data('id');
+                duplicateTrade(tradeId);
+            });
+            
+            // Refresh analytics
+            $('#refresh-analytics').on('click', function() {
+                loadAdvancedAnalytics();
+            });
+            
+            function duplicateTrade(tradeId) {
+                $.ajax({
+                    url: `/calculatentrade_journal/api/trades/${tradeId}`,
+                    method: 'GET',
+                    xhrFields: { withCredentials: true },
+                    beforeSend: function(xhr) {
+                        const token = localStorage.getItem('broker_token');
+                        if (token) xhr.setRequestHeader('Authorization', 'Bearer ' + token);
+                    }
+                }).done(function(trade) {
+                    // Redirect to trade form with pre-filled data
+                    const params = new URLSearchParams({
+                        symbol: trade.symbol,
+                        trade_type: trade.trade_type,
+                        entry_price: trade.entry_price,
+                        quantity: trade.quantity,
+                        strategy_id: trade.strategy_id || ''
+                    });
+                    window.location.href = `/calculatentrade_journal/trade_form?${params.toString()}`;
+                }).fail(function(jqXHR) {
+                    console.error('Duplicate trade failed:', jqXHR.status, jqXHR.responseText);
+                    showNotification('Error loading trade data for duplication', 'error');
+                });
+            }
+            
+            function loadAdvancedAnalytics() {
+                $.ajax({
+                    url: '/calculatentrade_journal/api/analytics',
+                    method: 'GET',
+                    xhrFields: { withCredentials: true },
+                    beforeSend: function(xhr) {
+                        const token = localStorage.getItem('broker_token');
+                        if (token) xhr.setRequestHeader('Authorization', 'Bearer ' + token);
+                    }
+                }).done(function(data) {
+                    $('#avg-win').text(data.avg_win ? data.avg_win.toFixed(2) : '0.00');
+                    $('#avg-loss').text(data.avg_loss ? Math.abs(data.avg_loss).toFixed(2) : '0.00');
+                    $('#profit-factor').text(data.profit_factor ? data.profit_factor.toFixed(2) : '0.00');
+                    $('#max-drawdown').text(data.max_drawdown ? data.max_drawdown.toFixed(2) : '0.00');
+                    $('#sharpe-ratio').text(data.sharpe_ratio ? data.sharpe_ratio.toFixed(2) : '0.00');
+                    $('#total-volume').text(data.total_volume ? data.total_volume.toLocaleString() : '0');
+                    $('#best-symbol').text(data.best_symbol || '-');
+                    $('#most-traded').text(data.most_traded || '-');
+                }).fail(function(jqXHR) {
+                    console.error('Load analytics failed:', jqXHR.status, jqXHR.responseText);
+                });
+            }
+        });
+    </script>
+</body>
+</html>
