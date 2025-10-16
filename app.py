@@ -119,10 +119,20 @@ def load_user(user_id):
 # Database initialization
 with app.app_context():
     try:
+        # Ensure database connection is established
+        db.engine.execute('SELECT 1')
         db.create_all()
         print("PostgreSQL database tables created successfully")
     except Exception as e:
         print(f"Error creating PostgreSQL database tables: {e}")
+        # Retry database creation after a short delay
+        import time
+        time.sleep(2)
+        try:
+            db.create_all()
+            print("PostgreSQL database tables created successfully on retry")
+        except Exception as retry_e:
+            print(f"Retry failed: {retry_e}")
     
     try:
         init_admin_db(db)
@@ -1029,8 +1039,21 @@ def check_email():
     if not email:
         return jsonify({"exists": False})
     
-    user = User.query.filter_by(email=email).first()
-    return jsonify({"exists": bool(user)})
+    try:
+        # Ensure tables exist before querying
+        db.create_all()
+        user = User.query.filter_by(email=email).first()
+        return jsonify({"exists": bool(user)})
+    except Exception as e:
+        print(f"Database error in check_email: {e}")
+        # Try to create tables and retry
+        try:
+            db.create_all()
+            user = User.query.filter_by(email=email).first()
+            return jsonify({"exists": bool(user)})
+        except Exception as retry_e:
+            print(f"Retry failed in check_email: {retry_e}")
+            return jsonify({"exists": False, "error": "Database connection issue"}), 500
 
 @app.route("/purchase_subscription", methods=["POST"])
 @login_required
