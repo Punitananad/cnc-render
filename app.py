@@ -153,24 +153,24 @@ def init_database_with_retry():
 
 # Initialize database
 init_database_with_retry()
-    
-    try:
-        init_admin_db(db)
-        print("Admin blueprint database initialized")
-    except Exception as e:
-        print(f"Error initializing admin blueprint: {e}")
-    
-    try:
-        init_employee_dashboard_db(db)
-        print("Employee dashboard blueprint database initialized")
-    except Exception as e:
-        print(f"Error initializing employee dashboard blueprint: {e}")
-    
-    try:
-        init_mentor_db(db)
-        print("Mentor blueprint database initialized")
-    except Exception as e:
-        print(f"Error creating mentor models: {e}")
+
+try:
+    init_admin_db(db)
+    print("Admin blueprint database initialized")
+except Exception as e:
+    print(f"Error initializing admin blueprint: {e}")
+
+try:
+    init_employee_dashboard_db(db)
+    print("Employee dashboard blueprint database initialized")
+except Exception as e:
+    print(f"Error initializing employee dashboard blueprint: {e}")
+
+try:
+    init_mentor_db(db)
+    print("Mentor blueprint database initialized")
+except Exception as e:
+    print(f"Error creating mentor models: {e}")
     
 
 
